@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'my_medication.dart';
+import 'profile.dart';
+import 'ai_chat.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,9 +18,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _pages = [
     const HomeContent(),        // 0: 홈
     const MyMedicationScreen(), // 1: 마이약장
-    const Center(child: Text('카메라 화면')), // 2: 카메라 (플로팅 버튼용 여백)
-    const Center(child: Text('AI 상담 준비중')), // 3: AI 상담
-    const Center(child: Text('내정보 준비중')),  // 4: 내정보
+    const Center(child: Text('카메라 화면')), // 2: 카메라
+    const AiChatScreen(),       // 3: AI 상담
+    const ProfileScreen(),      // 4: 내정보 (여기가 싹 바뀌었습니다!)
   ];
 
   @override
