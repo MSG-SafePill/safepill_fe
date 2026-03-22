@@ -11,11 +11,17 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 1. 상단 파란색 헤더 영역
+        // 1. 상단 파란색 헤더 영역 (홈 화면과 완벽 동일한 스타일 적용!)
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.only(top: 70, left: 20, right: 20, bottom: 25),
-          color: const Color(0xFF2A8DE5),
+          padding: const EdgeInsets.only(top: 70, left: 20, right: 20, bottom: 30),
+          decoration: const BoxDecoration(
+            color: Color(0xFF2A8DE5),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(25), 
+              bottomRight: Radius.circular(25)
+            ),
+          ),
           child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

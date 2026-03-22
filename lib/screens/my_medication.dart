@@ -10,18 +10,34 @@ class MyMedicationScreen extends StatelessWidget {
     return DefaultTabController(
       length: 3, 
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
+        backgroundColor: const Color(0xFFF8F9FA), // 본문 배경색 (연한 회색)
         
-        // [상단 앱바 및 탭 메뉴]
+        // [상단 앱바 및 탭 메뉴] - 이미지 7 디자인 적용
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          title: const Text('마이약장', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.white, // 앱바 배경색 (흰색)
+          elevation: 1, // 이미지 7처럼 약간의 그림자 추가
+          
+          automaticallyImplyLeading: false, // 👈 ✨ [핵심 수정] 뒤로가기 버튼을 강제로 제거합니다.
+
+          title: const Text(
+            '마이약장',
+            style: TextStyle(
+              color: Colors.black, // 타이틀 색상 (검정)
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          
+          // 이미지 7처럼 하단 탭과 여백을 주고 싶다면, 여기에 padding을 주는 것보다
+          // AppBar.bottom 보다는 body의 Column 상단에 배치하는 게 낫습니다.
+          // 일단은 AppBar.bottom으로 구현하고, 여백을 조절하겠습니다.
           bottom: const TabBar(
-            labelColor: Color(0xFF2A8DE5),
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Color(0xFF2A8DE5),
+            labelColor: Color(0xFF2A8DE5), // 선택된 탭 컬러
+            unselectedLabelColor: Colors.grey, // 선택 안 된 탭 컬러
+            indicatorColor: Color(0xFF2A8DE5), // 밑줄 컬러
             indicatorWeight: 3,
+            labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            unselectedLabelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
             tabs: [
               Tab(text: '전체'),
               Tab(text: '처방약'),
@@ -33,9 +49,12 @@ class MyMedicationScreen extends StatelessWidget {
         // [메인 본문 영역]
         body: Column(
           children: [
-            // 1. 상단 검색창
+            // 이미지 7의 탭바 아래 하얀 여백 디테일을 살리기 위해 Container 추가
+            Container(height: 10, color: Colors.white),
+
+            // 1. 상단 검색창 (이미지 7 스타일)
             Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
               child: TextField(
                 decoration: InputDecoration(
                   hintText: '약품명 또는 성분명 검색',
@@ -64,7 +83,7 @@ class MyMedicationScreen extends StatelessWidget {
                       PillCard(icon: 'Ω', name: '오메가3 (알티지)', days: '2일분', instruction: '저녁 식후 1캡슐', isWarning: true),
                     ],
                   ),
-                  // [처방약] 탭 리스트
+                  // [처방약] 탭 리스트 (예시 데이터 하나만!)
                   ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     children: const [
@@ -85,7 +104,7 @@ class MyMedicationScreen extends StatelessWidget {
           ],
         ),
 
-        // [우측 하단 약 추가 플로팅 버튼]
+        // [우측 하단 약 추가 플로팅 버튼] 유지
         floatingActionButton: FloatingActionButton(
           onPressed: () {
             Navigator.push(

@@ -68,19 +68,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
       backgroundColor: const Color(0xFFF8F9FA), // 전체 배경색
       body: Column(
         children: [
-          // 1. 상단 AI 프로필 헤더 (그라데이션 & 둥근 모서리)
+          // 1. 상단 AI 프로필 헤더 (홈 화면과 완벽 동일한 스타일 적용!)
           Container(
-            padding: const EdgeInsets.only(top: 60, left: 20, right: 20, bottom: 20),
+            padding: const EdgeInsets.only(top: 70, left: 20, right: 20, bottom: 30),
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF2A8DE5), Color(0xFF00BFA5)],
+              color: Color(0xFF2A8DE5), // 그라데이션 제거하고 통일!
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(25), 
+                bottomRight: Radius.circular(25)
               ),
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)), // 밑부분만 둥글게!
-              boxShadow: [
-                BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
-              ],
             ),
             child: Row(
               children: [
