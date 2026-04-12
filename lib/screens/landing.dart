@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'login.dart'; 
+import 'signup.dart'; // 👈 1. 방금 만든 회원가입 화면을 불러옵니다!
 
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
@@ -76,7 +77,6 @@ class LandingScreen extends StatelessWidget {
                   height: 55,
                   child: ElevatedButton(
                     onPressed: () {
-                      // ✨ 드디어 마법의 코드가 들어갑니다! 로그인 화면으로 촥! 넘어갑니다.
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -103,7 +103,11 @@ class LandingScreen extends StatelessWidget {
                   height: 55,
                   child: ElevatedButton(
                     onPressed: () {
-                      // TODO: 회원가입 화면 이동 로직
+                      // 👇 2. 이제 이 버튼을 누르면 회원가입 화면으로 넘어갑니다!
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SignupScreen()),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,

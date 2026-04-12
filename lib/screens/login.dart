@@ -1,8 +1,81 @@
 import 'package:flutter/material.dart';
-import 'home.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'home.dart'; 
+import 'signup.dart';
 
-class LoginScreen extends StatelessWidget {
+// 1. 화면의 상태를 변경할 수 있도록 StatefulWidget으로 변경!
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  // 2. 입력창에서 글자를 빼오기 위한 빨대(Controller) 2개 준비!
+  final TextEditingController _idController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  // 3. 백엔드와 통신하는 진짜 로그인 함수!
+  Future<void> _login() async {
+    final loginId = _idController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (loginId.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('아이디와 비밀번호를 모두 입력해주세요.')),
+      );
+      return;
+    }
+
+    final url = Uri.parse('http://10.0.2.2:8080/api/users/login');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'loginId': loginId,
+          'password': password,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final token = response.body; // 백엔드가 준 JWT 토큰!
+        print("🎉 로그인 성공! 획득한 토큰: $token");
+
+        // 4. 로그인 성공하면 홈 화면으로 넘어가기!
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
+      } else {
+        // 비밀번호 틀림 등 에러 발생 시
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(content: Text('로그인 실패: ${response.body}')),
+          );
+        }
+      }
+    } catch (e) {
+      print("🔥 에러 발생: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('서버와 연결할 수 없습니다.')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _idController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,20 +88,15 @@ class LoginScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 40),
-              
-              // [상단 타이틀]
               const Text('Welcome!', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black)),
               const SizedBox(height: 50),
 
-              // [이메일 입력 폼]
-              _buildTextField('Email Address', false),
+              // 5. 입력 폼에 아까 만든 빨대(Controller)를 꽂아줍니다!
+              _buildTextField('Email Address (loginId)', false, _idController),
+              const SizedBox(height: 15),
+              _buildTextField('Password', true, _passwordController),
               const SizedBox(height: 15),
 
-              // [비밀번호 입력 폼]
-              _buildTextField('Password', true),
-              const SizedBox(height: 15),
-
-              // [비밀번호 찾기 링크]
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton(
@@ -38,18 +106,12 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // [메인 로그인 버튼]
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // 로그인 성공 시 홈 화면으로 이동 (스택 교체)
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const HomeScreen()),
-                    );
-                  },
+                  // 6. 버튼을 누르면 아까 만든 _login() 함수가 실행됩니다!
+                  onPressed: _login, 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2A8DE5),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -60,20 +122,24 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // [회원가입 유도 링크]
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text('Not a member? ', style: TextStyle(color: Colors.grey)),
                   GestureDetector(
-                    onTap: () {},
+                    onTap: () {
+                      // 👇 회원가입 화면으로 이동하는 코드!
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => SignupScreen()),
+                      );
+                    },
                     child: const Text('Register now', style: TextStyle(color: Color(0xFF2A8DE5), fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
               const SizedBox(height: 50),
 
-              // [소셜 간편 로그인 영역]
               const Text('Or continue with', style: TextStyle(color: Colors.grey)),
               const SizedBox(height: 20),
               Row(
@@ -94,11 +160,12 @@ class LoginScreen extends StatelessWidget {
   }
 
   // --- [UI 재사용 컴포넌트들] ---
-
-  // 텍스트 입력창 생성 위젯
-  Widget _buildTextField(String hint, bool isPassword) {
+  
+  // 💡 빨대(controller)를 받을 수 있게 수정했습니다!
+  Widget _buildTextField(String hint, bool isPassword, TextEditingController controller) {
     return TextField(
-      obscureText: isPassword, // 비밀번호일 경우 마스킹 처리
+      controller: controller, // 👈 여기에 빨대를 꽂습니다!
+      obscureText: isPassword,
       decoration: InputDecoration(
         hintText: hint,
         filled: true,
@@ -109,7 +176,6 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  // 소셜 로그인 원형 버튼 생성 위젯
   Widget _buildSocialButton(String label, Color color) {
     return Container(
       width: 50, height: 50,
