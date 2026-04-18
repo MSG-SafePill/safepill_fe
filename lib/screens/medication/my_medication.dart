@@ -78,24 +78,26 @@ class MyMedicationScreen extends StatelessWidget {
                   ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     children: const [
-                      PillCard(icon: '💊', name: '아세트아미노펜 500mg', days: '5일분', instruction: '필요 시 복용', isWarning: false),
-                      PillCard(icon: '🍘', name: '종합 비타민 (센트룸)', days: '20일분', instruction: '아침 식후 1정', isWarning: false),
-                      PillCard(icon: 'Ω', name: '오메가3 (알티지)', days: '2일분', instruction: '저녁 식후 1캡슐', isWarning: true),
+                      PillCard(icon: '💊', name: '메트포르민 500mg', days: '30일분', instruction: '아침 식후 1정', isWarning: false),
+                      PillCard(icon: '💊', name: '암로디핀 5mg', days: '30일분', instruction: '아침 식후 1정', isWarning: false),
+                      PillCard(icon: '👁️', name: '루테인 지아잔틴', days: '60일분', instruction: '점심 식사 중 1캡슐', isWarning: false),
+                      PillCard(icon: '🌿', name: '홍삼 진액', days: '2일분', instruction: '저녁 식전 1포 (시간엄수)', isWarning: true),
                     ],
                   ),
-                  // [처방약] 탭 리스트 (예시 데이터 하나만!)
+                  // [처방약] 탭 리스트
                   ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     children: const [
-                      PillCard(icon: '💊', name: '아세트아미노펜 500mg', days: '5일분', instruction: '필요 시 복용', isWarning: false),
+                      PillCard(icon: '💊', name: '메트포르민 500mg', days: '30일분', instruction: '아침 식후 1정', isWarning: false),
+                      PillCard(icon: '💊', name: '암로디핀 5mg', days: '30일분', instruction: '아침 식후 1정', isWarning: false),
                     ],
                   ),
                   // [영양제] 탭 리스트
                   ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     children: const [
-                      PillCard(icon: '🍘', name: '종합 비타민 (센트룸)', days: '20일분', instruction: '아침 식후 1정', isWarning: false),
-                      PillCard(icon: 'Ω', name: '오메가3 (알티지)', days: '2일분', instruction: '저녁 식후 1캡슐', isWarning: true),
+                      PillCard(icon: '👁️', name: '루테인 지아잔틴', days: '60일분', instruction: '점심 식사 중 1캡슐', isWarning: false),
+                      PillCard(icon: '🌿', name: '홍삼 진액', days: '2일분', instruction: '저녁 식전 1포 (시간엄수)', isWarning: true),
                     ],
                   ),
                 ],
