@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'home.dart';
+import '../main/home.dart';
 import 'landing.dart';
 
 class SplashScreen extends StatefulWidget {

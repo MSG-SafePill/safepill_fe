@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'profile_edit.dart';
-import 'landing.dart';
+import '../auth/landing.dart';
 import 'health_info.dart';
 import 'notification_settings.dart';
 

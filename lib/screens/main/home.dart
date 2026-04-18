@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'my_medication.dart';
-import 'profile.dart';
-import 'ai_chat.dart';
+import '../medication/my_medication.dart';
+import '../profile/profile.dart';
+import '../chat/ai_chat.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

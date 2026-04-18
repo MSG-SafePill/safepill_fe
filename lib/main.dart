@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/splash.dart'; // 👈 스플래시 화면을 꼭 불러와 주세요!
+import 'screens/auth/splash.dart'; // 👈 스플래시 화면을 꼭 불러와 주세요!
 
 void main() {
   runApp(const MyApp());
