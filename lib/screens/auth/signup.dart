@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import '../../services/api_client.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -16,6 +14,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _birthController = TextEditingController();
+  final ApiClient _apiClient = ApiClient();
   
   String _selectedGender = 'MALE'; 
   
@@ -43,22 +42,17 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    final String baseUrl = kIsWeb ? 'http://localhost:8080' : 'http://10.0.2.2:8080';
-    final url = Uri.parse('$baseUrl/api/users/check-id?loginId=$loginId');
-
     try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        setState(() { _isIdChecked = true; }); // 통과!
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ 사용 가능한 아이디입니다!'), backgroundColor: Colors.green),
-        );
-      } else {
-        setState(() { _isIdChecked = false; }); // 빠꾸!
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ ${response.body}'), backgroundColor: Colors.red),
-        );
-      }
+      await _apiClient.get('/api/users/check-id', query: {'loginId': loginId});
+      setState(() { _isIdChecked = true; });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('사용 가능한 아이디입니다.'), backgroundColor: Colors.green),
+      );
+    } on ApiException catch (e) {
+      setState(() { _isIdChecked = false; });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('서버 통신 에러가 발생했습니다.')));
     }
@@ -81,32 +75,26 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    final String baseUrl = kIsWeb ? 'http://localhost:8080' : 'http://10.0.2.2:8080';
-    final url = Uri.parse('$baseUrl/api/users/signup');
-
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      await _apiClient.post(
+        '/api/users/signup',
+        body: {
           'loginId': _idController.text.trim(),
           'password': _passwordController.text.trim(),
           'username': _nameController.text.trim(),
           'email': _emailController.text.trim(),
           'gender': _selectedGender,
           'birthDate': _birthController.text.trim(),
-        }),
+        },
       );
 
-      if (response.statusCode == 200) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('회원가입 성공! 로그인해주세요.')));
-          Navigator.pop(context); 
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('가입 실패: ${response.body}')));
-        }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('회원가입 성공! 로그인해주세요.')));
+        Navigator.pop(context);
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('가입 실패: ${e.message}')));
       }
     } catch (e) {
       if (mounted) {

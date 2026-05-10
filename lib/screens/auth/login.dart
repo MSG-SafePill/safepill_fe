@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import '../main/home.dart'; 
+import '../../services/api_client.dart';
+import '../main/home.dart';
 import 'signup.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter/foundation.dart';
 
 // 1. 화면의 상태를 변경할 수 있도록 StatefulWidget으로 변경!
 class LoginScreen extends StatefulWidget {
@@ -18,7 +15,8 @@ class _LoginScreenState extends State<LoginScreen> {
   // 2. 입력창에서 글자를 빼오기 위한 빨대(Controller) 2개 준비!
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final storage = const FlutterSecureStorage();
+  final ApiClient _apiClient = ApiClient();
+  bool _isLoading = false;
 
   // 3. 백엔드와 통신하는 진짜 로그인 함수!
   Future<void> _login() async {
@@ -32,49 +30,45 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-  // 💡 새로 들어갈 스마트한 주소 세팅 
-  final String baseUrl = kIsWeb ? 'http://localhost:8080' : 'http://10.0.2.2:8080';
-  final url = Uri.parse('$baseUrl/api/users/login');
-
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      setState(() {
+        _isLoading = true;
+      });
+
+      final response = await _apiClient.post(
+        '/api/users/login',
+        body: {
           'loginId': loginId,
           'password': password,
-        }),
+        },
       );
 
-      if (response.statusCode == 200) {
-        final token = response.body; // 백엔드가 준 JWT 토큰!
-        print("🎉 로그인 성공! 획득한 토큰: $token");
+      final token = response.body;
+      await _apiClient.saveToken(token);
 
-        // 👇 획득한 토큰을 'jwt_token'이라는 이름표를 붙여서 금고에 쏙 넣습니다!
-        await storage.write(key: 'jwt_token', value: token);
-        print("🔒 금고에 토큰 저장 완료!");
-
-        // 4. 로그인 성공하면 홈 화면으로 넘어가기!
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        }
-      } else {
-        // 비밀번호 틀림 등 에러 발생 시
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(content: Text('로그인 실패: ${response.body}')),
-          );
-        }
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('로그인 실패: ${e.message}')),
+        );
       }
     } catch (e) {
-      print("🔥 에러 발생: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('서버와 연결할 수 없습니다.')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -120,13 +114,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 55,
                 child: ElevatedButton(
                   // 6. 버튼을 누르면 아까 만든 _login() 함수가 실행됩니다!
-                  onPressed: _login, 
+                  onPressed: _isLoading ? null : _login,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2A8DE5),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     elevation: 0,
                   ),
-                  child: const Text('Login', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    _isLoading ? '로그인 중...' : 'Login',
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
