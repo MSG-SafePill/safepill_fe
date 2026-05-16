@@ -3,7 +3,9 @@ import '../../services/api_client.dart';
 import '../../services/medication_api.dart';
 
 class AddMedicationScreen extends StatefulWidget {
-  const AddMedicationScreen({super.key});
+  final String? initialKeyword;
+
+  const AddMedicationScreen({super.key, this.initialKeyword});
 
   @override
   State<AddMedicationScreen> createState() => _AddMedicationScreenState();
@@ -22,6 +24,20 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   MedicationSearchItem? _selectedItem;
 
   @override
+  void initState() {
+    super.initState();
+    final keyword = widget.initialKeyword?.trim();
+    if (keyword != null && keyword.isNotEmpty) {
+      _searchController.text = keyword;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _searchMedications();
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -30,9 +46,9 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   Future<void> _searchMedications() async {
     final keyword = _searchController.text.trim();
     if (keyword.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('검색어를 입력해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('검색어를 입력해주세요.')));
       return;
     }
 
@@ -50,15 +66,15 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('검색 실패: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('검색 실패: ${e.message}')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('서버와 연결할 수 없습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('서버와 연결할 수 없습니다.')));
       }
     } finally {
       if (mounted) {
@@ -72,9 +88,9 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   Future<void> _addMedication() async {
     final selectedItem = _selectedItem;
     if (selectedItem == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('내 약장에 추가할 약품을 선택해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('내 약장에 추가할 약품을 선택해주세요.')));
       return;
     }
 
@@ -85,22 +101,22 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     try {
       await _medicationApi.addToMyPills(selectedItem);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('내 약장에 추가되었습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('내 약장에 추가되었습니다.')));
         Navigator.pop(context);
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('추가 실패: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('추가 실패: ${e.message}')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('서버와 연결할 수 없습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('서버와 연결할 수 없습니다.')));
       }
     } finally {
       if (mounted) {
@@ -115,7 +131,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      
+
       // [상단 앱바]
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -124,7 +140,10 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('약품 직접 추가', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text(
+          '약품 직접 추가',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
       ),
 
       // [메인 입력 폼 영역]
@@ -148,13 +167,22 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.arrow_forward, color: Color(0xFF2A8DE5)),
+                      : const Icon(
+                          Icons.arrow_forward,
+                          color: Color(0xFF2A8DE5),
+                        ),
                   onPressed: _isSearching ? null : _searchMedications,
                 ),
                 filled: true,
                 fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: Colors.grey[300]!)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: Colors.grey[300]!)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -162,7 +190,10 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
               children: [
                 Icon(Icons.info, color: Color(0xFF2A8DE5), size: 14),
                 SizedBox(width: 4),
-                Text('정확한 상극 분석(DUR)을 위해 제품명을 검색해 주세요.', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(
+                  '정확한 상극 분석(DUR)을 위해 제품명을 검색해 주세요.',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
               ],
             ),
             if (_searchResults.isNotEmpty) ...[
@@ -175,9 +206,21 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
             _buildSectionTitle('분류'),
             Row(
               children: [
-                Expanded(child: _buildToggleButton('처방약 / 일반약', isPrescription, () => setState(() => isPrescription = true))),
+                Expanded(
+                  child: _buildToggleButton(
+                    '처방약 / 일반약',
+                    isPrescription,
+                    () => setState(() => isPrescription = true),
+                  ),
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: _buildToggleButton('영양제', !isPrescription, () => setState(() => isPrescription = false))),
+                Expanded(
+                  child: _buildToggleButton(
+                    '영양제',
+                    !isPrescription,
+                    () => setState(() => isPrescription = false),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 30),
@@ -187,21 +230,32 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildSectionTitle('복용 시간', isRequired: true),
-                const Text('다중 선택 가능', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                const Text(
+                  '다중 선택 가능',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
               ],
             ),
             Wrap(
               spacing: 10,
               runSpacing: 10,
-              children: [
-                _buildTimeButton('☀️ 아침 식전'), _buildTimeButton('☀️ 아침 식후'),
-                _buildTimeButton('⛅ 점심 식전'), _buildTimeButton('⛅ 점심 식후'),
-                _buildTimeButton('🌙 저녁 식전'), _buildTimeButton('🌙 저녁 식후'),
-                _buildTimeButton('🛌 취침 전'),
-              ].map((widget) => FractionallySizedBox(
-                widthFactor: 0.48,
-                child: widget,
-              )).toList(),
+              children:
+                  [
+                        _buildTimeButton('☀️ 아침 식전'),
+                        _buildTimeButton('☀️ 아침 식후'),
+                        _buildTimeButton('⛅ 점심 식전'),
+                        _buildTimeButton('⛅ 점심 식후'),
+                        _buildTimeButton('🌙 저녁 식전'),
+                        _buildTimeButton('🌙 저녁 식후'),
+                        _buildTimeButton('🛌 취침 전'),
+                      ]
+                      .map(
+                        (widget) => FractionallySizedBox(
+                          widthFactor: 0.48,
+                          child: widget,
+                        ),
+                      )
+                      .toList(),
             ),
             const SizedBox(height: 10),
             _buildTimeButton('시간 상관없이 필요 시 복용', isFullWidth: true),
@@ -222,9 +276,26 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                   const Text('총 며칠 분량인가요?', style: TextStyle(fontSize: 14)),
                   Row(
                     children: [
-                      _buildRoundButton(Icons.remove, () => setState(() => days > 1 ? days-- : null)),
-                      SizedBox(width: 40, child: Text('$days', textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2A8DE5)))),
-                      _buildRoundButton(Icons.add, () => setState(() => days++)),
+                      _buildRoundButton(
+                        Icons.remove,
+                        () => setState(() => days > 1 ? days-- : null),
+                      ),
+                      SizedBox(
+                        width: 40,
+                        child: Text(
+                          '$days',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2A8DE5),
+                          ),
+                        ),
+                      ),
+                      _buildRoundButton(
+                        Icons.add,
+                        () => setState(() => days++),
+                      ),
                     ],
                   ),
                 ],
@@ -246,12 +317,18 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
               onPressed: _isSaving ? null : _addMedication,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2A8DE5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
                 elevation: 0,
               ),
               child: Text(
                 _isSaving ? '추가 중...' : '마이약장에 추가하기',
-                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -268,8 +345,19 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       child: RichText(
         text: TextSpan(
           text: title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
-          children: isRequired ? [const TextSpan(text: ' *', style: TextStyle(color: Color(0xFF2A8DE5)))] : [],
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+          children: isRequired
+              ? [
+                  const TextSpan(
+                    text: ' *',
+                    style: TextStyle(color: Color(0xFF2A8DE5)),
+                  ),
+                ]
+              : [],
         ),
       ),
     );
@@ -284,9 +372,18 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFE3F2FD) : Colors.white,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: isSelected ? const Color(0xFF2A8DE5) : Colors.grey[300]!, width: 1.5),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF2A8DE5) : Colors.grey[300]!,
+            width: 1.5,
+          ),
         ),
-        child: Text(label, style: TextStyle(color: isSelected ? const Color(0xFF2A8DE5) : Colors.grey, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF2A8DE5) : Colors.grey,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
       ),
     );
   }
@@ -296,8 +393,11 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     return GestureDetector(
       onTap: () {
         setState(() {
-          if (isSelected) selectedTimes.remove(label);
-          else selectedTimes.add(label);
+          if (isSelected) {
+            selectedTimes.remove(label);
+          } else {
+            selectedTimes.add(label);
+          }
         });
       },
       child: Container(
@@ -307,9 +407,18 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFE3F2FD) : Colors.white,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: isSelected ? const Color(0xFF2A8DE5) : Colors.grey[300]!, width: 1.5),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF2A8DE5) : Colors.grey[300]!,
+            width: 1.5,
+          ),
         ),
-        child: Text(label, style: TextStyle(color: isSelected ? const Color(0xFF2A8DE5) : Colors.black87, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF2A8DE5) : Colors.black87,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
       ),
     );
   }
@@ -318,15 +427,20 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        width: 32, height: 32,
-        decoration: const BoxDecoration(color: Color(0xFFE3F2FD), shape: BoxShape.circle),
+        width: 32,
+        height: 32,
+        decoration: const BoxDecoration(
+          color: Color(0xFFE3F2FD),
+          shape: BoxShape.circle,
+        ),
         child: Icon(icon, size: 18, color: const Color(0xFF2A8DE5)),
       ),
     );
   }
 
   Widget _buildSearchResultTile(MedicationSearchItem item) {
-    final isSelected = _selectedItem?.type == item.type && _selectedItem?.id == item.id;
+    final isSelected =
+        _selectedItem?.type == item.type && _selectedItem?.id == item.id;
     final typeLabel = item.type == SearchItemType.medicine ? '의약품' : '영양제';
 
     return GestureDetector(
@@ -342,12 +456,16 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFE3F2FD) : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? const Color(0xFF2A8DE5) : Colors.grey[300]!),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF2A8DE5) : Colors.grey[300]!,
+          ),
         ),
         child: Row(
           children: [
             Icon(
-              item.type == SearchItemType.medicine ? Icons.medication : Icons.spa,
+              item.type == SearchItemType.medicine
+                  ? Icons.medication
+                  : Icons.spa,
               color: isSelected ? const Color(0xFF2A8DE5) : Colors.grey,
             ),
             const SizedBox(width: 12),
@@ -355,7 +473,13 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(
+                    item.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     '$typeLabel${item.manufacturer == null ? '' : ' | ${item.manufacturer}'}',
@@ -364,7 +488,8 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                 ],
               ),
             ),
-            if (isSelected) const Icon(Icons.check_circle, color: Color(0xFF2A8DE5)),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: Color(0xFF2A8DE5)),
           ],
         ),
       ),

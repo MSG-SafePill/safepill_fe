@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../medication/add_medication.dart';
 import '../../services/api_client.dart';
 import '../../services/vision_api.dart';
 
@@ -195,6 +196,7 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
       ..._pillCandidates.map(
         (item) => Card(
           child: ListTile(
+            onTap: () => _openAddMedication(item.pillName),
             leading: const Icon(Icons.medication, color: Color(0xFF2A8DE5)),
             title: Text(item.pillName),
             subtitle: Text(
@@ -223,6 +225,7 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
       ..._prescriptionItems.map(
         (item) => Card(
           child: ListTile(
+            onTap: () => _openAddMedication(item.medicineName),
             leading: const Icon(Icons.receipt_long, color: Color(0xFF2A8DE5)),
             title: Text(item.medicineName),
             subtitle: Text(
@@ -237,5 +240,14 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
         ),
       ),
     ];
+  }
+
+  void _openAddMedication(String keyword) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddMedicationScreen(initialKeyword: keyword),
+      ),
+    );
   }
 }
