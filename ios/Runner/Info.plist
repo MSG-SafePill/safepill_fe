@@ -26,6 +26,12 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>약 낱알과 처방전을 촬영해 약 정보를 식별하기 위해 카메라를 사용합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>앨범에서 약 낱알 또는 처방전 이미지를 선택하기 위해 사진 보관함을 사용합니다.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>분석용 이미지를 저장해야 할 때 사진 보관함 접근 권한이 필요합니다.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
