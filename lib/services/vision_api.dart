@@ -23,6 +23,7 @@ class PrescriptionOcrItem {
   final String? frequency;
   final String? mealTiming;
   final String? days;
+  final List<OcrScheduleSuggestion> scheduleSuggestions;
 
   PrescriptionOcrItem({
     required this.medicineName,
@@ -31,7 +32,33 @@ class PrescriptionOcrItem {
     this.frequency,
     this.mealTiming,
     this.days,
+    this.scheduleSuggestions = const [],
   });
+}
+
+class OcrScheduleSuggestion {
+  final String takeTime;
+  final List<String> daysOfWeek;
+  final String dosage;
+  final String? mealTiming;
+
+  OcrScheduleSuggestion({
+    required this.takeTime,
+    required this.daysOfWeek,
+    required this.dosage,
+    this.mealTiming,
+  });
+
+  factory OcrScheduleSuggestion.fromJson(Map<String, dynamic> json) {
+    return OcrScheduleSuggestion(
+      takeTime: json['takeTime'] as String? ?? '',
+      daysOfWeek: (json['daysOfWeek'] as List<dynamic>? ?? [])
+          .map((item) => item.toString())
+          .toList(),
+      dosage: json['dosage'] as String? ?? '',
+      mealTiming: json['mealTiming'] as String?,
+    );
+  }
 }
 
 class VisionApi {
@@ -79,6 +106,11 @@ class VisionApi {
         frequency: map['frequency'] as String?,
         mealTiming: map['mealTiming'] as String?,
         days: map['days'] as String?,
+        scheduleSuggestions:
+            (map['scheduleSuggestions'] as List<dynamic>? ?? [])
+                .map((item) =>
+                    OcrScheduleSuggestion.fromJson(item as Map<String, dynamic>))
+                .toList(),
       );
     }).toList();
   }

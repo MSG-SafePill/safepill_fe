@@ -7,8 +7,9 @@ import 'package:http/http.dart' as http;
 class ApiException implements Exception {
   final int statusCode;
   final String message;
+  final String? code;
 
-  ApiException(this.statusCode, this.message);
+  ApiException(this.statusCode, this.message, {this.code});
 
   @override
   String toString() => message;
@@ -60,6 +61,21 @@ class ApiClient {
   }) async {
     final uri = _buildUri(path);
     final response = await _httpClient.post(
+      uri,
+      headers: await _headers(auth: auth),
+      body: body == null ? null : jsonEncode(body),
+    );
+    _throwIfFailed(response);
+    return response;
+  }
+
+  Future<http.Response> patch(
+    String path, {
+    Object? body,
+    bool auth = false,
+  }) async {
+    final uri = _buildUri(path);
+    final response = await _httpClient.patch(
       uri,
       headers: await _headers(auth: auth),
       body: body == null ? null : jsonEncode(body),
@@ -127,9 +143,21 @@ class ApiClient {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
     }
+    String message = response.body.isEmpty ? '요청에 실패했습니다.' : response.body;
+    String? code;
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        code = decoded['code'] as String?;
+        message = decoded['message'] as String? ?? message;
+      }
+    } catch (_) {
+      // Keep raw response body for legacy string error responses.
+    }
     throw ApiException(
       response.statusCode,
-      response.body.isEmpty ? '요청에 실패했습니다.' : response.body,
+      message,
+      code: code,
     );
   }
 }
