@@ -1,8 +1,80 @@
 import 'package:flutter/material.dart';
+import '../../services/api_client.dart';
+import '../../services/medication_api.dart';
 import 'add_medication.dart';
 
-class MyMedicationScreen extends StatelessWidget {
+class MyMedicationScreen extends StatefulWidget {
   const MyMedicationScreen({super.key});
+
+  @override
+  State<MyMedicationScreen> createState() => _MyMedicationScreenState();
+}
+
+class _MyMedicationScreenState extends State<MyMedicationScreen> {
+  final MedicationApi _medicationApi = MedicationApi();
+  final TextEditingController _searchController = TextEditingController();
+  bool _isLoading = true;
+  List<CabinetItem> _items = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMyPills();
+    _searchController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadMyPills() async {
+    setState(() => _isLoading = true);
+    try {
+      final items = await _medicationApi.getMyPills();
+      if (mounted) {
+        setState(() => _items = items);
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('약장 조회 실패: ${e.message}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _deleteMyPill(int regId) async {
+    try {
+      await _medicationApi.deleteMyPill(regId);
+      if (mounted) {
+        setState(() => _items.removeWhere((item) => item.regId == regId));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('내 약장에서 삭제되었습니다.')));
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('삭제 실패: ${e.message}')),
+        );
+      }
+    }
+  }
+
+  List<CabinetItem> _filteredItems(SearchItemType? type) {
+    final keyword = _searchController.text.trim();
+    return _items.where((item) {
+      final typeMatched = type == null || item.type == type;
+      final keywordMatched = keyword.isEmpty || item.itemName.contains(keyword);
+      return typeMatched && keywordMatched;
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +128,7 @@ class MyMedicationScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
               child: TextField(
+                controller: _searchController,
                 decoration: InputDecoration(
                   hintText: '약품명 또는 성분명 검색',
                   prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -72,34 +145,13 @@ class MyMedicationScreen extends StatelessWidget {
 
             // 2. 탭별 약품 리스트 화면 전환 영역
             Expanded(
-              child: TabBarView(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : TabBarView(
                 children: [
-                  // [전체] 탭 리스트
-                  ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    children: const [
-                      PillCard(icon: '💊', name: '메트포르민 500mg', days: '30일분', instruction: '아침 식후 1정', isWarning: false),
-                      PillCard(icon: '💊', name: '암로디핀 5mg', days: '30일분', instruction: '아침 식후 1정', isWarning: false),
-                      PillCard(icon: '👁️', name: '루테인 지아잔틴', days: '60일분', instruction: '점심 식사 중 1캡슐', isWarning: false),
-                      PillCard(icon: '🌿', name: '홍삼 진액', days: '2일분', instruction: '저녁 식전 1포 (시간엄수)', isWarning: true),
-                    ],
-                  ),
-                  // [처방약] 탭 리스트
-                  ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    children: const [
-                      PillCard(icon: '💊', name: '메트포르민 500mg', days: '30일분', instruction: '아침 식후 1정', isWarning: false),
-                      PillCard(icon: '💊', name: '암로디핀 5mg', days: '30일분', instruction: '아침 식후 1정', isWarning: false),
-                    ],
-                  ),
-                  // [영양제] 탭 리스트
-                  ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    children: const [
-                      PillCard(icon: '👁️', name: '루테인 지아잔틴', days: '60일분', instruction: '점심 식사 중 1캡슐', isWarning: false),
-                      PillCard(icon: '🌿', name: '홍삼 진액', days: '2일분', instruction: '저녁 식전 1포 (시간엄수)', isWarning: true),
-                    ],
-                  ),
+                  _buildPillList(_filteredItems(null)),
+                  _buildPillList(_filteredItems(SearchItemType.medicine)),
+                  _buildPillList(_filteredItems(SearchItemType.supplement)),
                 ],
               ),
             ),
@@ -112,7 +164,7 @@ class MyMedicationScreen extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const AddMedicationScreen()),
-            );
+            ).then((_) => _loadMyPills());
           },
           backgroundColor: const Color(0xFF2A8DE5),
           shape: const CircleBorder(),
@@ -120,6 +172,30 @@ class MyMedicationScreen extends StatelessWidget {
           child: const Icon(Icons.add, color: Colors.white, size: 35), 
         ),
       ),
+    );
+  }
+
+  Widget _buildPillList(List<CabinetItem> items) {
+    if (items.isEmpty) {
+      return const Center(child: Text('등록된 항목이 없습니다.'));
+    }
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      children: items
+          .map(
+            (item) => PillCard(
+              icon: item.type == SearchItemType.medicine ? '💊' : '🌿',
+              name: item.itemName,
+              days: '등록됨',
+              instruction: item.efficacy?.isNotEmpty == true
+                  ? item.efficacy!
+                  : item.manufacturer ?? '',
+              isWarning: false,
+              onDelete: () => _deleteMyPill(item.regId),
+            ),
+          )
+          .toList(),
     );
   }
 }
@@ -131,8 +207,9 @@ class PillCard extends StatefulWidget {
   final String days;
   final String instruction;
   final bool isWarning; // 소진 임박 등 경고 상태 체크
+  final VoidCallback? onDelete;
 
-  const PillCard({super.key, required this.icon, required this.name, required this.days, required this.instruction, this.isWarning = false});
+  const PillCard({super.key, required this.icon, required this.name, required this.days, required this.instruction, this.isWarning = false, this.onDelete});
 
   @override
   State<PillCard> createState() => _PillCardState();
@@ -206,7 +283,10 @@ class _PillCardState extends State<PillCard> {
                     Expanded(
                       child: TextButton(
                         onPressed: () {
-                          // TODO: 삭제 기능 로직 연결
+                          widget.onDelete?.call();
+                          setState(() {
+                            _showDeleteMenu = false;
+                          });
                         },
                         child: const Text('삭제', style: TextStyle(color: Color(0xFFFF5252), fontWeight: FontWeight.bold)),
                       ),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/api_client.dart';
+import '../../services/schedule_api.dart';
 import '../camera/scan_medication.dart';
 import '../medication/my_medication.dart';
 import '../profile/profile.dart';
@@ -122,8 +124,78 @@ class _HomeScreenState extends State<HomeScreen> {
 // ==========================================
 // [0번 탭: 새롭게 디자인된 홈 화면 본문]
 // ==========================================
-class HomeContent extends StatelessWidget {
+class HomeContent extends StatefulWidget {
   const HomeContent({super.key});
+
+  @override
+  State<HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<HomeContent> {
+  final ScheduleApi _scheduleApi = ScheduleApi();
+  bool _isLoading = true;
+  List<IntakeSchedule> _schedules = [];
+  Map<int, IntakeLog> _logsByScheduleId = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTodaySchedules();
+  }
+
+  Future<void> _loadTodaySchedules() async {
+    setState(() => _isLoading = true);
+    try {
+      final schedules = await _scheduleApi.getTodaySchedules();
+      final logs = await _scheduleApi.getLogsByDate(DateTime.now());
+      if (mounted) {
+        setState(() {
+          _schedules = schedules;
+          _logsByScheduleId = {
+            for (final log in logs) log.scheduleId: log,
+          };
+        });
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('오늘의 스케줄 조회 실패: ${e.message}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<bool> _setTaken(IntakeSchedule schedule, bool isTaken) async {
+    try {
+      final existingLog = _logsByScheduleId[schedule.scheduleId];
+      final status = isTaken ? IntakeStatus.taken : IntakeStatus.skipped;
+      final log = existingLog == null
+          ? await _scheduleApi.createLog(
+              scheduleId: schedule.scheduleId,
+              status: status,
+            )
+          : await _scheduleApi.updateLog(
+              logId: existingLog.logId,
+              status: status,
+              actualTime: DateTime.now(),
+            );
+      if (mounted) {
+        setState(() => _logsByScheduleId[schedule.scheduleId] = log);
+      }
+      return true;
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('복약 기록 저장 실패: ${e.message}')),
+        );
+      }
+      return false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -169,10 +241,14 @@ class HomeContent extends StatelessWidget {
 
         // 2. 새로운 약품 리스트 영역
         Expanded(
-          child: ListView(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                  onRefresh: _loadTodaySchedules,
+                  child: ListView(
             padding: const EdgeInsets.all(24),
-            children: const [
-              Text(
+            children: [
+              const Text(
                 '오늘의 복약 스케줄',
                 style: TextStyle(
                   fontSize: 18,
@@ -180,40 +256,27 @@ class HomeContent extends StatelessWidget {
                   color: Color(0xFF2C3E50),
                 ),
               ),
-              SizedBox(height: 16),
-
-              // 💡 새로운 약품 데이터 적용!
-              HomeMedicationCard(
-                time: '08:30',
-                name: '메트포르민 500mg',
-                detail: '식후 30분 | 1정 (당뇨약)',
-                isInitiallyTaken: true,
-              ),
-              SizedBox(height: 12),
-              HomeMedicationCard(
-                time: '08:30',
-                name: '암로디핀 5mg',
-                detail: '식후 30분 | 1정 (혈압약)',
-                isInitiallyTaken: true,
-              ),
-              SizedBox(height: 12),
-              HomeMedicationCard(
-                time: '13:00',
-                name: '루테인 지아잔틴',
-                detail: '식사 중 | 1캡슐 (눈 영양제)',
-              ),
-              SizedBox(height: 12),
-
-              // 🚀 홍삼 진액에만 AI 분석 버튼 활성화!
-              HomeMedicationCard(
-                time: '18:00',
-                name: '홍삼 진액',
-                detail: '식전 | 1포 (면역 영양제)',
-                showAiButton: true,
-              ),
-              SizedBox(height: 80), // 하단 여백
+              const SizedBox(height: 16),
+              if (_schedules.isEmpty)
+                const Text('오늘 예정된 복약 스케줄이 없습니다.')
+              else
+                ..._schedules.expand((schedule) {
+                  final log = _logsByScheduleId[schedule.scheduleId];
+                  return [
+                    HomeMedicationCard(
+                      time: schedule.takeTime,
+                      name: schedule.itemName,
+                      detail: schedule.dosage,
+                      isInitiallyTaken: log?.status == IntakeStatus.taken,
+                      onTakenChanged: (isTaken) => _setTaken(schedule, isTaken),
+                    ),
+                    const SizedBox(height: 12),
+                  ];
+                }),
+              const SizedBox(height: 80), // 하단 여백
             ],
           ),
+        ),
         ),
       ],
     );
@@ -229,6 +292,7 @@ class HomeMedicationCard extends StatefulWidget {
   final String detail;
   final bool showAiButton;
   final bool isInitiallyTaken;
+  final Future<bool> Function(bool isTaken)? onTakenChanged;
 
   const HomeMedicationCard({
     super.key,
@@ -237,6 +301,7 @@ class HomeMedicationCard extends StatefulWidget {
     required this.detail,
     this.showAiButton = false,
     this.isInitiallyTaken = false,
+    this.onTakenChanged,
   });
 
   @override
@@ -245,6 +310,7 @@ class HomeMedicationCard extends StatefulWidget {
 
 class _HomeMedicationCardState extends State<HomeMedicationCard> {
   late bool isTaken;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -339,10 +405,23 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
 
           // 체크박스 동작 부분
           GestureDetector(
-            onTap: () {
+            onTap: _isSaving
+                ? null
+                : () async {
+              final next = !isTaken;
               setState(() {
-                isTaken = !isTaken; // 클릭할 때마다 상태 토글
+                isTaken = next; // 클릭할 때마다 상태 토글
+                _isSaving = true;
               });
+              final saved = await widget.onTakenChanged?.call(next) ?? true;
+              if (mounted) {
+                setState(() {
+                  if (!saved) {
+                    isTaken = !next;
+                  }
+                  _isSaving = false;
+                });
+              }
             },
             child: Container(
               width: 28,

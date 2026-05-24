@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
 import '../../services/medication_api.dart';
+import '../../services/schedule_api.dart';
 
 class AddMedicationScreen extends StatefulWidget {
   final String? initialKeyword;
@@ -15,6 +16,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   // [상태 변수]
   final TextEditingController _searchController = TextEditingController();
   final MedicationApi _medicationApi = MedicationApi();
+  final ScheduleApi _scheduleApi = ScheduleApi();
   bool isPrescription = true;
   Set<String> selectedTimes = {};
   int days = 30;
@@ -58,10 +60,10 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     });
 
     try {
-      final results = await _medicationApi.search(keyword);
+      final results = await _medicationApi.searchPage(keyword, auth: true);
       if (mounted) {
         setState(() {
-          _searchResults = results;
+          _searchResults = results.items;
         });
       }
     } on ApiException catch (e) {
@@ -93,6 +95,12 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       ).showSnackBar(const SnackBar(content: Text('내 약장에 추가할 약품을 선택해주세요.')));
       return;
     }
+    if (selectedItem.registered) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('이미 내 약장에 등록된 항목입니다.')));
+      return;
+    }
 
     setState(() {
       _isSaving = true;
@@ -100,6 +108,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
 
     try {
       await _medicationApi.addToMyPills(selectedItem);
+      await _createSchedulesIfSelected(selectedItem);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -125,6 +134,57 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
         });
       }
     }
+  }
+
+  Future<void> _createSchedulesIfSelected(MedicationSearchItem item) async {
+    if (selectedTimes.isEmpty) {
+      return;
+    }
+
+    final myPills = await _medicationApi.getMyPills();
+    CabinetItem? registered;
+    for (final pill in myPills) {
+      if (pill.type == item.type && pill.itemId == item.id) {
+        registered = pill;
+      }
+    }
+    if (registered == null) {
+      return;
+    }
+
+    final createdTimes = <String>{};
+    for (final label in selectedTimes) {
+      final takeTime = _timeLabelToTakeTime(label);
+      if (takeTime == null || !createdTimes.add(takeTime)) {
+        continue;
+      }
+      try {
+        await _scheduleApi.createSchedule(
+          regId: registered.regId,
+          takeTime: takeTime,
+          daysOfWeek: const ['EVERYDAY'],
+          dosage: item.type == SearchItemType.medicine ? '1정' : '1회분',
+        );
+      } on ApiException {
+        // 약장 등록은 성공했으므로 스케줄 중복 등은 화면 흐름을 막지 않습니다.
+      }
+    }
+  }
+
+  String? _timeLabelToTakeTime(String label) {
+    if (label.contains('아침')) {
+      return '08:00';
+    }
+    if (label.contains('점심')) {
+      return '13:00';
+    }
+    if (label.contains('저녁')) {
+      return '19:00';
+    }
+    if (label.contains('취침')) {
+      return '22:00';
+    }
+    return null;
   }
 
   @override
@@ -445,6 +505,12 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
 
     return GestureDetector(
       onTap: () {
+        if (item.registered) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('이미 등록된 항목입니다.')));
+          return;
+        }
         setState(() {
           _selectedItem = item;
           isPrescription = item.type == SearchItemType.medicine;
@@ -454,7 +520,11 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE3F2FD) : Colors.white,
+          color: item.registered
+              ? Colors.grey.shade100
+              : isSelected
+                  ? const Color(0xFFE3F2FD)
+                  : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? const Color(0xFF2A8DE5) : Colors.grey[300]!,
@@ -489,7 +559,12 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
               ),
             ),
             if (isSelected)
-              const Icon(Icons.check_circle, color: Color(0xFF2A8DE5)),
+              const Icon(Icons.check_circle, color: Color(0xFF2A8DE5))
+            else if (item.registered)
+              const Text(
+                '등록됨',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
           ],
         ),
       ),

@@ -1,12 +1,55 @@
 import 'package:flutter/material.dart';
+import '../../services/api_client.dart';
+import '../../services/interaction_api.dart';
 
-class AnalysisResult extends StatelessWidget {
-  final bool isDanger = true; 
-
+class AnalysisResult extends StatefulWidget {
   const AnalysisResult({Key? key}) : super(key: key);
 
   @override
+  State<AnalysisResult> createState() => _AnalysisResultState();
+}
+
+class _AnalysisResultState extends State<AnalysisResult> {
+  final InteractionApi _interactionApi = InteractionApi();
+  bool _isLoading = true;
+  AiInteractionAnalysis? _analysis;
+  String? _errorMessage;
+
+  bool get isDanger {
+    final risk = _analysis?.riskLevel;
+    return risk == 'DANGER' || risk == 'WARNING' || risk == 'CAUTION';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAnalysis();
+  }
+
+  Future<void> _loadAnalysis() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final analysis = await _interactionApi.analyzeMyCabinetWithAi();
+      if (mounted) {
+        setState(() => _analysis = analysis);
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = e.message);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final analysis = _analysis;
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -15,7 +58,9 @@ class AnalysisResult extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
       ),
-      body: Padding(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -51,8 +96,11 @@ class AnalysisResult extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      isDanger ? '함께 드시면 안 되는 조합이 있습니다.' : '함께 드셔도 안전합니다.',
+                      _errorMessage ??
+                          analysis?.summary ??
+                          (isDanger ? '함께 드시면 안 되는 조합이 있습니다.' : '함께 드셔도 안전합니다.'),
                       style: const TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -78,8 +126,13 @@ class AnalysisResult extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        '홍삼(영양제)과 메트포르민(당뇨약)을 함께 복용 시, 저혈당 위험이 높아질 수 있습니다.',
+                      Text(
+                        analysis?.warnings.isNotEmpty == true
+                            ? analysis!.warnings
+                                .map((warning) => warning.reason ?? warning.title ?? '')
+                                .where((text) => text.isNotEmpty)
+                                .join('\n')
+                            : '상호작용 주의 항목이 확인되었습니다.',
                         style: TextStyle(fontSize: 15, height: 1.5),
                       ),
                     ],
