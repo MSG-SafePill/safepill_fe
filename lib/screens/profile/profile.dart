@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
 import '../../services/local_profile_api.dart';
+import '../../services/user_profile_api.dart';
 import 'profile_edit.dart';
 import '../auth/landing.dart';
 import 'health_info.dart';
@@ -15,6 +16,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final LocalProfileApi _localProfileApi = LocalProfileApi();
+  final UserProfileApi _userProfileApi = UserProfileApi();
   String _nickname = '사용자';
 
   @override
@@ -24,9 +26,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadProfile() async {
-    final profile = await _localProfileApi.getProfile();
-    if (mounted) {
-      setState(() => _nickname = profile.nickname);
+    try {
+      final profile = await _userProfileApi.getProfile();
+      if (mounted) {
+        setState(() => _nickname = profile.username);
+      }
+    } on ApiException {
+      final profile = await _localProfileApi.getProfile();
+      if (mounted) {
+        setState(() => _nickname = profile.nickname);
+      }
     }
   }
 
