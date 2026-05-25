@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
 import '../../services/medication_api.dart';
 import 'add_medication.dart';
+import 'analysis_result.dart';
 
 class MyMedicationScreen extends StatefulWidget {
   const MyMedicationScreen({super.key});
@@ -99,6 +100,17 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
               fontSize: 20,
             ),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.health_and_safety, color: Color(0xFF2A8DE5)),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AnalysisResult()),
+                );
+              },
+            ),
+          ],
           
           // 이미지 7처럼 하단 탭과 여백을 주고 싶다면, 여기에 padding을 주는 것보다
           // AppBar.bottom 보다는 body의 Column 상단에 배치하는 게 낫습니다.

@@ -3,6 +3,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../medication/add_medication.dart';
 import '../../services/api_client.dart';
+import '../../services/medication_api.dart';
+import '../../services/ocr_registration_api.dart';
 import '../../services/vision_api.dart';
 
 enum ScanMode { pill, prescription }
@@ -17,12 +19,15 @@ class ScanMedicationScreen extends StatefulWidget {
 class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
   final ImagePicker _picker = ImagePicker();
   final VisionApi _visionApi = VisionApi();
+  final OcrRegistrationApi _ocrRegistrationApi = OcrRegistrationApi();
 
   ScanMode _mode = ScanMode.pill;
   bool _isLoading = false;
   XFile? _selectedImage;
   List<PillIdentifyCandidate> _pillCandidates = [];
   List<PrescriptionOcrItem> _prescriptionItems = [];
+  final Map<String, MedicationMatchCandidate> _selectedOcrCandidates = {};
+  bool _isRegistering = false;
 
   Future<void> _pickAndAnalyze(ImageSource source) async {
     final image = await _picker.pickImage(source: source, imageQuality: 85);
@@ -35,6 +40,7 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
       _isLoading = true;
       _pillCandidates = [];
       _prescriptionItems = [];
+      _selectedOcrCandidates.clear();
     });
 
     try {
@@ -105,6 +111,7 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
                       _mode = value.first;
                       _pillCandidates = [];
                       _prescriptionItems = [];
+                      _selectedOcrCandidates.clear();
                     });
                   },
           ),
@@ -196,13 +203,22 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
       ..._pillCandidates.map(
         (item) => Card(
           child: ListTile(
-            onTap: () => _openAddMedication(item.pillName),
+            onTap: () {
+              if (item.itemId != null && item.itemType != null) {
+                _registerSingleCandidate(item);
+              } else {
+                _openAddMedication(item.pillName);
+              }
+            },
             leading: const Icon(Icons.medication, color: Color(0xFF2A8DE5)),
             title: Text(item.pillName),
             subtitle: Text(
-              '신뢰도 ${(item.confidence * 100).toStringAsFixed(1)}%',
+              [
+                '신뢰도 ${(item.confidence * 100).toStringAsFixed(1)}%',
+                item.manufacturer,
+              ].whereType<String>().join(' | '),
             ),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: Icon(item.itemId == null ? Icons.chevron_right : Icons.add_circle_outline),
           ),
         ),
       ),
@@ -224,21 +240,91 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
       const SizedBox(height: 12),
       ..._prescriptionItems.map(
         (item) => Card(
-          child: ListTile(
-            onTap: () => _openAddMedication(item.medicineName),
-            leading: const Icon(Icons.receipt_long, color: Color(0xFF2A8DE5)),
-            title: Text(item.medicineName),
-            subtitle: Text(
-              [
-                item.dosage,
-                item.frequency,
-                item.mealTiming,
-                item.days,
-              ].whereType<String>().join(' | '),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.receipt_long, color: Color(0xFF2A8DE5)),
+                  title: Text(item.medicineName),
+                  subtitle: Text(
+                    [
+                      item.dosage,
+                      item.frequency,
+                      item.mealTiming,
+                      item.days,
+                    ].whereType<String>().join(' | '),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () => _openAddMedication(item.medicineName),
+                  ),
+                ),
+                if (item.matchCandidates.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedOcrCandidates[item.medicineName]?.selectionKey,
+                      decoration: InputDecoration(
+                        labelText: '등록 후보 선택',
+                        filled: true,
+                        fillColor: const Color(0xFFF8F9FA),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      items: item.matchCandidates
+                          .map(
+                            (candidate) => DropdownMenuItem(
+                              value: candidate.selectionKey,
+                              child: Text(candidate.itemName),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (selectionKey) {
+                        setState(() {
+                          OcrMatchCandidate? candidate;
+                          for (final matchCandidate in item.matchCandidates) {
+                            if (matchCandidate.selectionKey == selectionKey) {
+                              candidate = matchCandidate;
+                              break;
+                            }
+                          }
+                          if (candidate != null) {
+                            _selectedOcrCandidates[item.medicineName] =
+                                MedicationMatchCandidate(
+                              itemType: candidate.itemType == 'SUPPLEMENT'
+                                  ? SearchItemType.supplement
+                                  : SearchItemType.medicine,
+                              itemId: candidate.itemId,
+                              itemName: candidate.itemName,
+                              manufacturer: candidate.manufacturer,
+                              score: candidate.score,
+                            );
+                          }
+                        });
+                      },
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
       ),
+      if (_prescriptionItems.any((item) => item.matchCandidates.isNotEmpty)) ...[
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: _isRegistering ? null : _registerSelectedOcrItems,
+          icon: const Icon(Icons.playlist_add_check),
+          label: Text(_isRegistering ? '등록 중...' : '선택한 OCR 결과 등록'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2A8DE5),
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(52),
+          ),
+        ),
+      ],
     ];
   }
 
@@ -249,5 +335,64 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
         builder: (context) => AddMedicationScreen(initialKeyword: keyword),
       ),
     );
+  }
+
+  Future<void> _registerSingleCandidate(PillIdentifyCandidate item) async {
+    final candidate = MedicationMatchCandidate(
+      itemType: item.itemType == 'SUPPLEMENT'
+          ? SearchItemType.supplement
+          : SearchItemType.medicine,
+      itemId: item.itemId!,
+      itemName: item.pillName,
+      manufacturer: item.manufacturer,
+      score: item.confidence,
+    );
+    await _registerSelections([
+      OcrRegistrationSelection(candidate: candidate, schedules: const []),
+    ]);
+  }
+
+  Future<void> _registerSelectedOcrItems() async {
+    final selections = <OcrRegistrationSelection>[];
+    for (final item in _prescriptionItems) {
+      final candidate = _selectedOcrCandidates[item.medicineName];
+      if (candidate != null) {
+        selections.add(
+          OcrRegistrationSelection(
+            candidate: candidate,
+            schedules: item.scheduleSuggestions,
+          ),
+        );
+      }
+    }
+    if (selections.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('등록할 후보를 선택해주세요.')));
+      return;
+    }
+    await _registerSelections(selections);
+  }
+
+  Future<void> _registerSelections(List<OcrRegistrationSelection> selections) async {
+    setState(() => _isRegistering = true);
+    try {
+      final results = await _ocrRegistrationApi.registerSelections(selections);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${results.length}개 항목이 등록되었습니다.')),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('등록 실패: ${e.message}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRegistering = false);
+      }
+    }
   }
 }

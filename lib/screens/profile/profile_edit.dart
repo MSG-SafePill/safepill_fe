@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/local_profile_api.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key});
@@ -8,10 +9,56 @@ class ProfileEditScreen extends StatefulWidget {
 }
 
 class _ProfileEditScreenState extends State<ProfileEditScreen> {
-  // 텍스트를 제어할 컨트롤러들 (미리 임시 데이터를 넣어둡니다)
-  final TextEditingController _nicknameController = TextEditingController(text: '강민준');
-  final TextEditingController _emailController = TextEditingController(text: 'coja0727@naver.com');
+  final LocalProfileApi _localProfileApi = LocalProfileApi();
+  final TextEditingController _nicknameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController(text: '********');
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await _localProfileApi.getProfile();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _nicknameController.text = profile.nickname;
+      _emailController.text = profile.loginId;
+    });
+  }
+
+  Future<void> _saveProfile() async {
+    final nickname = _nicknameController.text.trim();
+    if (nickname.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('닉네임을 입력해주세요.')),
+      );
+      return;
+    }
+    setState(() => _isSaving = true);
+    await _localProfileApi.saveNickname(nickname);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isSaving = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('프로필이 저장되었습니다.')),
+    );
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +151,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               decoration: _inputDecoration().copyWith(
                 suffixIcon: TextButton(
                   onPressed: () {
-                    // TODO: 비밀번호 변경 팝업 또는 화면 이동
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('비밀번호 변경은 서버 API가 추가되면 연결할 수 있습니다.')),
+                    );
                   },
                   child: const Text('변경', style: TextStyle(color: Color(0xFF2A8DE5), fontWeight: FontWeight.bold)),
                 ),
@@ -117,16 +166,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: () {
-                  // TODO: 변경된 닉네임 서버에 저장
-                  Navigator.pop(context); // 저장 후 이전 화면으로 돌아가기
-                },
+                onPressed: _isSaving ? null : _saveProfile,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2A8DE5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                child: const Text('변경사항 저장하기', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                child: Text(_isSaving ? '저장 중...' : '변경사항 저장하기', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
             const SizedBox(height: 20),

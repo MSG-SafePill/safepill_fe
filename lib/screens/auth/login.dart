@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
+import '../../services/local_profile_api.dart';
 import '../main/home.dart';
 import 'signup.dart';
 
@@ -16,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final ApiClient _apiClient = ApiClient();
+  final LocalProfileApi _localProfileApi = LocalProfileApi();
   bool _isLoading = false;
 
   // 3. 백엔드와 통신하는 진짜 로그인 함수!
@@ -45,6 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final token = response.body;
       await _apiClient.saveToken(token);
+      await _localProfileApi.saveLoginId(loginId);
 
       if (mounted) {
         Navigator.pushReplacement(

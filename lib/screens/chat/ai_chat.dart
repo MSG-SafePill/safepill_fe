@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/api_client.dart';
+import '../../services/chat_api.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -10,50 +12,105 @@ class AiChatScreen extends StatefulWidget {
 class _AiChatScreenState extends State<AiChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ChatApi _chatApi = ChatApi();
+  int? _sessionId;
+  bool _isSending = false;
 
-  // 대화 내용을 담아둘 리스트 (기본 인사말과 더미 데이터 세팅)
   final List<Map<String, dynamic>> _messages = [
     {
       'isUser': false,
       'text': '안녕하세요, 홍길동님! SafePill AI 상담사 필봇입니다. 어떤 도움이 필요하신가요? 약물 복용 방법이나 상극 정보가 궁금하시다면 언제든 물어봐 주세요.'
     },
-    {
-      'isUser': true,
-      'text': '타이레놀이랑 감기약을 같이 먹어도 괜찮을까요?'
-    },
-    {
-      'isUser': false,
-      'text': '네, 타이레놀과 일반적인 종합 감기약은 같이 복용하셔도 큰 무리가 없습니다. 하지만 감기약 성분에 아세트아미노펜이 중복으로 포함되어 있을 수 있으니, 하루 권장 복용량을 넘지 않도록 주의해야 합니다. 제가 두 약품의 상세 DUR 정보를 확인해 드릴까요?'
-    },
   ];
 
-  // 메시지 전송 기능
-  void _sendMessage() {
-    if (_textController.text.trim().isEmpty) return;
+  @override
+  void initState() {
+    super.initState();
+    _ensureSession();
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _ensureSession() async {
+    try {
+      final sessions = await _chatApi.getSessions();
+      final session = sessions.isNotEmpty ? sessions.first : await _chatApi.createSession();
+      if (mounted) {
+        setState(() => _sessionId = session.sessionId);
+        final serverMessages = await _chatApi.getMessages(session.sessionId);
+        if (mounted && serverMessages.isNotEmpty) {
+          setState(() {
+            _messages
+              ..clear()
+              ..addAll(serverMessages.map((message) => {
+                    'isUser': message.senderRole == ChatSenderRole.user,
+                    'text': message.contents,
+                  }));
+          });
+        }
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('채팅 세션 연결 실패: ${e.message}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendMessage() async {
+    final question = _textController.text.trim();
+    if (question.isEmpty || _isSending) return;
 
     setState(() {
-      // 1. 내가 보낸 메시지 화면에 추가
-      _messages.add({'isUser': true, 'text': _textController.text});
+      _isSending = true;
+      _messages.add({'isUser': true, 'text': question});
       _textController.clear();
     });
+    _scrollToBottom();
 
-    // 스크롤 맨 아래로 내리기
-    Future.delayed(const Duration(milliseconds: 100), () {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    });
-
-    // 2. 1.5초 뒤에 AI가 대답하는 척 (더미 응답 추가)
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      setState(() {
-        _messages.add({
-          'isUser': false,
-          'text': 'AI 분석 중입니다... 더 정확한 처방을 위해서는 전문의와 상담하시는 것을 권장합니다 😊'
+    try {
+      var sessionId = _sessionId;
+      if (sessionId == null) {
+        final session = await _chatApi.createSession();
+        sessionId = session.sessionId;
+        if (mounted) {
+          setState(() => _sessionId = sessionId);
+        }
+      }
+      final answer = await _chatApi.ask(sessionId: sessionId, question: question);
+      if (mounted) {
+        setState(() {
+          _messages.add({
+            'isUser': false,
+            'text': answer.assistantMessage.contents,
+          });
         });
-      });
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages.add({'isUser': false, 'text': '상담 요청 실패: ${e.message}'});
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+      _scrollToBottom();
+    }
+  }
+
+  void _scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (!_scrollController.hasClients) {
+        return;
+      }
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 300),
@@ -121,12 +178,17 @@ class _AiChatScreenState extends State<AiChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final message = _messages[index];
-                final isUser = message['isUser'];
+                final isUser = message['isUser'] as bool;
 
-                return _buildChatBubble(message['text'], isUser);
+                return _buildChatBubble(message['text'] as String, isUser);
               },
             ),
           ),
+          if (_isSending)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text('필봇이 답변을 준비 중입니다...', style: TextStyle(color: Colors.grey)),
+            ),
 
           // 3. 하단 메시지 입력창 영역
           Container(
@@ -160,7 +222,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   const SizedBox(width: 10),
                   // 전송 버튼 (그라데이션)
                   GestureDetector(
-                    onTap: _sendMessage,
+                    onTap: _isSending ? null : _sendMessage,
                     child: Container(
                       width: 45, height: 45,
                       decoration: const BoxDecoration(

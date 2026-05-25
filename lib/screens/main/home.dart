@@ -172,6 +172,13 @@ class _HomeContentState extends State<HomeContent> {
   Future<bool> _setTaken(IntakeSchedule schedule, bool isTaken) async {
     try {
       final existingLog = _logsByScheduleId[schedule.scheduleId];
+      if (!isTaken && existingLog != null) {
+        await _scheduleApi.deleteLog(existingLog.logId);
+        if (mounted) {
+          setState(() => _logsByScheduleId.remove(schedule.scheduleId));
+        }
+        return true;
+      }
       final status = isTaken ? IntakeStatus.taken : IntakeStatus.skipped;
       final log = existingLog == null
           ? await _scheduleApi.createLog(
@@ -194,6 +201,61 @@ class _HomeContentState extends State<HomeContent> {
         );
       }
       return false;
+    }
+  }
+
+  Future<void> _deleteSchedule(IntakeSchedule schedule) async {
+    try {
+      await _scheduleApi.deleteSchedule(schedule.scheduleId);
+      if (mounted) {
+        setState(() {
+          _schedules.removeWhere((item) => item.scheduleId == schedule.scheduleId);
+          _logsByScheduleId.remove(schedule.scheduleId);
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('스케줄이 삭제되었습니다.')));
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('스케줄 삭제 실패: ${e.message}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _editScheduleTime(IntakeSchedule schedule) async {
+    final current = _parseTimeOfDay(schedule.takeTime);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: current ?? TimeOfDay.now(),
+    );
+    if (picked == null) {
+      return;
+    }
+    final takeTime =
+        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+    try {
+      final updated = await _scheduleApi.updateSchedule(
+        scheduleId: schedule.scheduleId,
+        takeTime: takeTime,
+      );
+      if (mounted) {
+        setState(() {
+          final index = _schedules.indexWhere((item) => item.scheduleId == updated.scheduleId);
+          if (index >= 0) {
+            _schedules[index] = updated;
+            _schedules.sort((a, b) => a.takeTime.compareTo(b.takeTime));
+          }
+        });
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('스케줄 수정 실패: ${e.message}')),
+        );
+      }
     }
   }
 
@@ -264,11 +326,14 @@ class _HomeContentState extends State<HomeContent> {
                   final log = _logsByScheduleId[schedule.scheduleId];
                   return [
                     HomeMedicationCard(
+                      key: ValueKey(schedule.scheduleId),
                       time: schedule.takeTime,
                       name: schedule.itemName,
                       detail: schedule.dosage,
                       isInitiallyTaken: log?.status == IntakeStatus.taken,
                       onTakenChanged: (isTaken) => _setTaken(schedule, isTaken),
+                      onEditSchedule: () => _editScheduleTime(schedule),
+                      onDeleteSchedule: () => _deleteSchedule(schedule),
                     ),
                     const SizedBox(height: 12),
                   ];
@@ -293,6 +358,8 @@ class HomeMedicationCard extends StatefulWidget {
   final bool showAiButton;
   final bool isInitiallyTaken;
   final Future<bool> Function(bool isTaken)? onTakenChanged;
+  final VoidCallback? onEditSchedule;
+  final VoidCallback? onDeleteSchedule;
 
   const HomeMedicationCard({
     super.key,
@@ -302,6 +369,8 @@ class HomeMedicationCard extends StatefulWidget {
     this.showAiButton = false,
     this.isInitiallyTaken = false,
     this.onTakenChanged,
+    this.onEditSchedule,
+    this.onDeleteSchedule,
   });
 
   @override
@@ -316,6 +385,14 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
   void initState() {
     super.initState();
     isTaken = widget.isInitiallyTaken;
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeMedicationCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isInitiallyTaken != widget.isInitiallyTaken) {
+      isTaken = widget.isInitiallyTaken;
+    }
   }
 
   @override
@@ -404,6 +481,21 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
           ),
 
           // 체크박스 동작 부분
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.grey),
+            onSelected: (value) {
+              if (value == 'edit') {
+                widget.onEditSchedule?.call();
+              }
+              if (value == 'delete') {
+                widget.onDeleteSchedule?.call();
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'edit', child: Text('시간 수정')),
+              PopupMenuItem(value: 'delete', child: Text('스케줄 삭제')),
+            ],
+          ),
           GestureDetector(
             onTap: _isSaving
                 ? null
@@ -576,4 +668,17 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
       },
     );
   }
+}
+
+TimeOfDay? _parseTimeOfDay(String value) {
+  final parts = value.split(':');
+  if (parts.length < 2) {
+    return null;
+  }
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null) {
+    return null;
+  }
+  return TimeOfDay(hour: hour, minute: minute);
 }

@@ -112,6 +112,26 @@ class ScheduleApi {
     await _apiClient.delete('/api/schedules/$scheduleId', auth: true);
   }
 
+  Future<IntakeSchedule> updateSchedule({
+    required int scheduleId,
+    String? takeTime,
+    List<String>? daysOfWeek,
+    String? dosage,
+  }) async {
+    final response = await _apiClient.patch(
+      '/api/schedules/$scheduleId',
+      auth: true,
+      body: {
+        if (takeTime != null) 'takeTime': takeTime,
+        if (daysOfWeek != null) 'daysOfWeek': daysOfWeek,
+        if (dosage != null) 'dosage': dosage,
+      },
+    );
+    return IntakeSchedule.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
   Future<IntakeLog> createLog({
     required int scheduleId,
     IntakeStatus status = IntakeStatus.taken,
@@ -154,6 +174,10 @@ class ScheduleApi {
     return items
         .map((item) => IntakeLog.fromJson(item as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<void> deleteLog(int logId) async {
+    await _apiClient.delete('/api/intake-logs/$logId', auth: true);
   }
 
   List<IntakeSchedule> _parseScheduleList(String body) {

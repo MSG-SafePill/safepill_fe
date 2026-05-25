@@ -6,11 +6,17 @@ import 'api_client.dart';
 
 class PillIdentifyCandidate {
   final String pillName;
+  final int? itemId;
+  final String? itemType;
+  final String? manufacturer;
   final double confidence;
   final String? matchedText;
 
   PillIdentifyCandidate({
     required this.pillName,
+    this.itemId,
+    this.itemType,
+    this.manufacturer,
     required this.confidence,
     this.matchedText,
   });
@@ -24,6 +30,7 @@ class PrescriptionOcrItem {
   final String? mealTiming;
   final String? days;
   final List<OcrScheduleSuggestion> scheduleSuggestions;
+  final List<OcrMatchCandidate> matchCandidates;
 
   PrescriptionOcrItem({
     required this.medicineName,
@@ -33,7 +40,36 @@ class PrescriptionOcrItem {
     this.mealTiming,
     this.days,
     this.scheduleSuggestions = const [],
+    this.matchCandidates = const [],
   });
+}
+
+class OcrMatchCandidate {
+  final int itemId;
+  final String itemType;
+  final String itemName;
+  final String? manufacturer;
+  final double score;
+
+  OcrMatchCandidate({
+    required this.itemId,
+    required this.itemType,
+    required this.itemName,
+    this.manufacturer,
+    required this.score,
+  });
+
+  factory OcrMatchCandidate.fromJson(Map<String, dynamic> json) {
+    return OcrMatchCandidate(
+      itemId: (json['itemId'] as num).toInt(),
+      itemType: json['itemType'] as String? ?? 'MEDICINE',
+      itemName: json['itemName'] as String? ?? '이름 없음',
+      manufacturer: json['manufacturer'] as String?,
+      score: ((json['score'] as num?) ?? 0).toDouble(),
+    );
+  }
+
+  String get selectionKey => '$itemType:$itemId';
 }
 
 class OcrScheduleSuggestion {
@@ -82,6 +118,9 @@ class VisionApi {
             map['pillName'] as String? ??
             map['medicineName'] as String? ??
             '이름 없음',
+        itemId: (map['itemId'] as num?)?.toInt(),
+        itemType: map['itemType'] as String?,
+        manufacturer: map['manufacturer'] as String?,
         confidence: ((map['confidence'] as num?) ?? 0).toDouble(),
         matchedText: map['matchedText'] as String?,
       );
@@ -111,6 +150,9 @@ class VisionApi {
                 .map((item) =>
                     OcrScheduleSuggestion.fromJson(item as Map<String, dynamic>))
                 .toList(),
+        matchCandidates: (map['matchCandidates'] as List<dynamic>? ?? [])
+            .map((item) => OcrMatchCandidate.fromJson(item as Map<String, dynamic>))
+            .toList(),
       );
     }).toList();
   }

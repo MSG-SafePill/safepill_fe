@@ -1,11 +1,34 @@
 import 'package:flutter/material.dart';
+import '../../services/api_client.dart';
+import '../../services/local_profile_api.dart';
 import 'profile_edit.dart';
 import '../auth/landing.dart';
 import 'health_info.dart';
 import 'notification_settings.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final LocalProfileApi _localProfileApi = LocalProfileApi();
+  String _nickname = '사용자';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await _localProfileApi.getProfile();
+    if (mounted) {
+      setState(() => _nickname = profile.nickname);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,12 +45,12 @@ class ProfileScreen extends StatelessWidget {
               bottomRight: Radius.circular(25)
             ),
           ),
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('안녕하세요, 홍길동님!', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              Text('오늘도 건강한 하루 보내세요!', style: TextStyle(color: Colors.white, fontSize: 14)),
+              Text('안녕하세요, $_nickname님!', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text('오늘도 건강한 하루 보내세요!', style: TextStyle(color: Colors.white, fontSize: 14)),
             ],
           ),
         ),
@@ -41,7 +64,8 @@ class ProfileScreen extends StatelessWidget {
               _buildSectionTitle('내 정보'),
               _buildMenuCard([
                 _buildMenuItem(Icons.person, '프로필 관리', showDivider: true, onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileEditScreen()));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileEditScreen()))
+                      .then((_) => _loadProfile());
                 }),
                 _buildMenuItem(Icons.medical_information, '건강 정보 (기저질환/알레르기)', showDivider: false, onTap: () {
                   // ✨ 건강 정보 관리 화면으로 이동!
@@ -68,11 +92,7 @@ class ProfileScreen extends StatelessWidget {
               _buildMenuCard([
                 // 계정 관리는 삭제하고 바로 로그아웃만 배치!
                 _buildMenuItem(Icons.logout, '로그아웃', showDivider: false, isDestructive: true, onTap: () {
-                  Navigator.pushAndRemoveUntil(
-                    context, 
-                    MaterialPageRoute(builder: (context) => const LandingScreen()), 
-                    (route) => false,
-                  );
+                  _logout(context);
                 }),
               ]),
             ],
@@ -132,6 +152,19 @@ class ProfileScreen extends StatelessWidget {
         if (showDivider)
           const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0), indent: 20, endIndent: 20),
       ],
+    );
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    await ApiClient().clearToken();
+    await _localProfileApi.clear();
+    if (!context.mounted) {
+      return;
+    }
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LandingScreen()),
+      (route) => false,
     );
   }
 }

@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -8,16 +11,26 @@ class NotificationSettingsScreen extends StatefulWidget {
 }
 
 class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
+  static const String _settingsKey = 'notification_settings';
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
   // --- 상태 변수 (토글 스위치 및 시간) ---
   bool _isAllAlarmOn = true;
   bool _isSoundVibrateOn = false;
   bool _isRefillAlarmOn = true;
+  int _snoozeMinutes = 10;
 
   // 초기 시간 설정값 (TimeOfDay 객체 사용)
   TimeOfDay _morningTime = const TimeOfDay(hour: 8, minute: 30);
   TimeOfDay _lunchTime = const TimeOfDay(hour: 13, minute: 0);
   TimeOfDay _dinnerTime = const TimeOfDay(hour: 19, minute: 0);
   TimeOfDay _nightTime = const TimeOfDay(hour: 23, minute: 30);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
 
   // 시간을 '오전 08:30' 형태로 예쁘게 바꿔주는 함수
   String _formatTime(TimeOfDay time) {
@@ -47,6 +60,83 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
     if (picked != null && picked != initialTime) {
       onTimeSelected(picked);
+    }
+  }
+
+  Future<void> _loadSettings() async {
+    final raw = await _storage.read(key: _settingsKey);
+    if (raw == null || raw.isEmpty) {
+      return;
+    }
+    try {
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isAllAlarmOn = data['allAlarm'] as bool? ?? _isAllAlarmOn;
+        _isSoundVibrateOn = data['soundVibrate'] as bool? ?? _isSoundVibrateOn;
+        _isRefillAlarmOn = data['refillAlarm'] as bool? ?? _isRefillAlarmOn;
+        _snoozeMinutes = (data['snoozeMinutes'] as num?)?.toInt() ?? _snoozeMinutes;
+        _morningTime = _parseStoredTime(data['morningTime'] as String?) ?? _morningTime;
+        _lunchTime = _parseStoredTime(data['lunchTime'] as String?) ?? _lunchTime;
+        _dinnerTime = _parseStoredTime(data['dinnerTime'] as String?) ?? _dinnerTime;
+        _nightTime = _parseStoredTime(data['nightTime'] as String?) ?? _nightTime;
+      });
+    } catch (_) {
+      await _storage.delete(key: _settingsKey);
+    }
+  }
+
+  Future<void> _saveSettings() async {
+    await _storage.write(
+      key: _settingsKey,
+      value: jsonEncode({
+        'allAlarm': _isAllAlarmOn,
+        'soundVibrate': _isSoundVibrateOn,
+        'refillAlarm': _isRefillAlarmOn,
+        'snoozeMinutes': _snoozeMinutes,
+        'morningTime': _timeToStorage(_morningTime),
+        'lunchTime': _timeToStorage(_lunchTime),
+        'dinnerTime': _timeToStorage(_dinnerTime),
+        'nightTime': _timeToStorage(_nightTime),
+      }),
+    );
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('알림 설정이 저장되었습니다.')));
+    Navigator.pop(context);
+  }
+
+  Future<void> _showSnoozePicker() async {
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [5, 10, 15, 30].map((minutes) {
+              return ListTile(
+                title: Text('$minutes분 후'),
+                trailing: _snoozeMinutes == minutes
+                    ? const Icon(Icons.check, color: Color(0xFF2A8DE5))
+                    : null,
+                onTap: () => Navigator.pop(context, minutes),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+    if (selected != null) {
+      setState(() => _snoozeMinutes = selected);
     }
   }
 
@@ -100,8 +190,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               child: Text('상세 설정', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
             _buildWhiteCard([
-              _buildSettingMenu('스누즈 (미루기) 간격', '10분 후', onTap: () {
-                // TODO: 스누즈 시간 설정 바텀시트
+              _buildSettingMenu('스누즈 (미루기) 간격', '$_snoozeMinutes분 후', onTap: () {
+                _showSnoozePicker();
               }),
               const Divider(height: 1, color: Color(0xFFF0F0F0)),
               _buildToggleRow('소리 및 진동 알림', '매너모드에서도 소리를 울립니다.', _isSoundVibrateOn, (val) => setState(() => _isSoundVibrateOn = val)),
@@ -116,8 +206,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               height: 55,
               child: ElevatedButton(
                 onPressed: () {
-                  // TODO: 설정 저장 로직
-                  Navigator.pop(context);
+                  _saveSettings();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2A8DE5),
@@ -228,5 +317,25 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         inactiveTrackColor: Colors.grey[300],
       ),
     );
+  }
+
+  TimeOfDay? _parseStoredTime(String? value) {
+    if (value == null) {
+      return null;
+    }
+    final parts = value.split(':');
+    if (parts.length != 2) {
+      return null;
+    }
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) {
+      return null;
+    }
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  String _timeToStorage(TimeOfDay time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 }

@@ -84,6 +84,21 @@ class ApiClient {
     return response;
   }
 
+  Future<http.Response> put(
+    String path, {
+    Object? body,
+    bool auth = false,
+  }) async {
+    final uri = _buildUri(path);
+    final response = await _httpClient.put(
+      uri,
+      headers: await _headers(auth: auth),
+      body: body == null ? null : jsonEncode(body),
+    );
+    _throwIfFailed(response);
+    return response;
+  }
+
   Future<http.Response> postMultipart(
     String path, {
     required List<int> fileBytes,
