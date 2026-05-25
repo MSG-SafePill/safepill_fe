@@ -51,8 +51,10 @@ class MedicationMatchResult {
     return MedicationMatchResult(
       keyword: json['keyword'] as String? ?? '',
       candidates: (json['candidates'] as List<dynamic>? ?? [])
-          .map((item) =>
-              MedicationMatchCandidate.fromJson(item as Map<String, dynamic>))
+          .map(
+            (item) =>
+                MedicationMatchCandidate.fromJson(item as Map<String, dynamic>),
+          )
           .toList(),
     );
   }
@@ -93,7 +95,7 @@ class OcrRegisteredItem {
 
 class OcrRegistrationApi {
   OcrRegistrationApi({ApiClient? apiClient})
-      : _apiClient = apiClient ?? ApiClient();
+    : _apiClient = apiClient ?? ApiClient();
 
   final ApiClient _apiClient;
 
@@ -108,7 +110,10 @@ class OcrRegistrationApi {
     );
     final items = jsonDecode(response.body) as List<dynamic>;
     return items
-        .map((item) => MedicationMatchResult.fromJson(item as Map<String, dynamic>))
+        .map(
+          (item) =>
+              MedicationMatchResult.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
   }
 
@@ -133,10 +138,7 @@ class OcrRegistrationSelection {
   final MedicationMatchCandidate candidate;
   final List<OcrScheduleSuggestion> schedules;
 
-  OcrRegistrationSelection({
-    required this.candidate,
-    required this.schedules,
-  });
+  OcrRegistrationSelection({required this.candidate, required this.schedules});
 
   Map<String, dynamic> toJson() {
     return {

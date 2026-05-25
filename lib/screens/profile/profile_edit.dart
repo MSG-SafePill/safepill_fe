@@ -12,7 +12,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final LocalProfileApi _localProfileApi = LocalProfileApi();
   final TextEditingController _nicknameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController(text: '********');
+  final TextEditingController _passwordController = TextEditingController(
+    text: '********',
+  );
   bool _isSaving = false;
 
   @override
@@ -43,9 +45,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Future<void> _saveProfile() async {
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('닉네임을 입력해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('닉네임을 입력해주세요.')));
       return;
     }
     setState(() => _isSaving = true);
@@ -54,9 +56,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       return;
     }
     setState(() => _isSaving = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('프로필이 저장되었습니다.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('프로필이 저장되었습니다.')));
     Navigator.pop(context);
   }
 
@@ -71,7 +73,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context), // 뒤로 가기
         ),
-        title: const Text('프로필 관리', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text(
+          '프로필 관리',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -79,7 +84,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 20),
-            
+
             // 1. 프로필 사진 & 변경 버튼 영역
             Center(
               child: Column(
@@ -89,12 +94,17 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     children: [
                       // 동그란 프사 배경
                       Container(
-                        width: 100, height: 100,
+                        width: 100,
+                        height: 100,
                         decoration: const BoxDecoration(
                           color: Color(0xFFE3F2FD), // 연한 파란색 배경
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.person, size: 60, color: Color(0xFF2A8DE5)),
+                        child: const Icon(
+                          Icons.person,
+                          size: 60,
+                          color: Color(0xFF2A8DE5),
+                        ),
                       ),
                       // 우측 하단 작은 카메라 아이콘 (뱃지)
                       Container(
@@ -102,14 +112,27 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))],
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.camera_alt, size: 16, color: Colors.grey),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  const Text('사진 변경', style: TextStyle(color: Colors.black54, fontSize: 14)),
+                  const Text(
+                    '사진 변경',
+                    style: TextStyle(color: Colors.black54, fontSize: 14),
+                  ),
                 ],
               ),
             ),
@@ -128,7 +151,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             TextField(
               controller: _emailController,
               readOnly: true, // 읽기 전용으로 설정
-              style: const TextStyle(color: Colors.black54), // 수정 불가 느낌을 위해 색상 살짝 연하게
+              style: const TextStyle(
+                color: Colors.black54,
+              ), // 수정 불가 느낌을 위해 색상 살짝 연하게
               decoration: _inputDecoration(),
             ),
             const SizedBox(height: 8),
@@ -137,7 +162,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               children: [
                 Icon(Icons.info, size: 14, color: Colors.grey),
                 SizedBox(width: 4),
-                Text('이메일은 변경할 수 없습니다.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  '이메일은 변경할 수 없습니다.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
             ),
             const SizedBox(height: 25),
@@ -152,10 +180,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 suffixIcon: TextButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('비밀번호 변경은 서버 API가 추가되면 연결할 수 있습니다.')),
+                      const SnackBar(
+                        content: Text('비밀번호 변경은 서버 API가 추가되면 연결할 수 있습니다.'),
+                      ),
                     );
                   },
-                  child: const Text('변경', style: TextStyle(color: Color(0xFF2A8DE5), fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    '변경',
+                    style: TextStyle(
+                      color: Color(0xFF2A8DE5),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -169,10 +205,19 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 onPressed: _isSaving ? null : _saveProfile,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2A8DE5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 0,
                 ),
-                child: Text(_isSaving ? '저장 중...' : '변경사항 저장하기', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                child: Text(
+                  _isSaving ? '저장 중...' : '변경사항 저장하기',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -183,12 +228,19 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   // --- UI 재사용 헬퍼 함수들 ---
-  
+
   // 라벨 (닉네임, 이메일 계정 등) 텍스트 위젯
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
-      child: Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
+      ),
     );
   }
 
@@ -198,8 +250,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       filled: true,
       fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2A8DE5), width: 1.5)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF2A8DE5), width: 1.5),
+      ),
     );
   }
 }

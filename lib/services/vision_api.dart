@@ -147,11 +147,17 @@ class VisionApi {
         days: map['days'] as String?,
         scheduleSuggestions:
             (map['scheduleSuggestions'] as List<dynamic>? ?? [])
-                .map((item) =>
-                    OcrScheduleSuggestion.fromJson(item as Map<String, dynamic>))
+                .map(
+                  (item) => OcrScheduleSuggestion.fromJson(
+                    item as Map<String, dynamic>,
+                  ),
+                )
                 .toList(),
         matchCandidates: (map['matchCandidates'] as List<dynamic>? ?? [])
-            .map((item) => OcrMatchCandidate.fromJson(item as Map<String, dynamic>))
+            .map(
+              (item) =>
+                  OcrMatchCandidate.fromJson(item as Map<String, dynamic>),
+            )
             .toList(),
       );
     }).toList();

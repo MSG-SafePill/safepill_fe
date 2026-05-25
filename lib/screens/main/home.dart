@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF2A8DE5).withOpacity(0.3),
+                color: const Color(0xFF2A8DE5).withValues(alpha: 0.3),
                 blurRadius: 15,
                 spreadRadius: 2,
                 offset: const Offset(0, 4),
@@ -151,16 +151,14 @@ class _HomeContentState extends State<HomeContent> {
       if (mounted) {
         setState(() {
           _schedules = schedules;
-          _logsByScheduleId = {
-            for (final log in logs) log.scheduleId: log,
-          };
+          _logsByScheduleId = {for (final log in logs) log.scheduleId: log};
         });
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('오늘의 스케줄 조회 실패: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('오늘의 스케줄 조회 실패: ${e.message}')));
       }
     } finally {
       if (mounted) {
@@ -196,9 +194,9 @@ class _HomeContentState extends State<HomeContent> {
       return true;
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('복약 기록 저장 실패: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('복약 기록 저장 실패: ${e.message}')));
       }
       return false;
     }
@@ -209,7 +207,9 @@ class _HomeContentState extends State<HomeContent> {
       await _scheduleApi.deleteSchedule(schedule.scheduleId);
       if (mounted) {
         setState(() {
-          _schedules.removeWhere((item) => item.scheduleId == schedule.scheduleId);
+          _schedules.removeWhere(
+            (item) => item.scheduleId == schedule.scheduleId,
+          );
           _logsByScheduleId.remove(schedule.scheduleId);
         });
         ScaffoldMessenger.of(
@@ -218,9 +218,9 @@ class _HomeContentState extends State<HomeContent> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('스케줄 삭제 실패: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('스케줄 삭제 실패: ${e.message}')));
       }
     }
   }
@@ -243,7 +243,9 @@ class _HomeContentState extends State<HomeContent> {
       );
       if (mounted) {
         setState(() {
-          final index = _schedules.indexWhere((item) => item.scheduleId == updated.scheduleId);
+          final index = _schedules.indexWhere(
+            (item) => item.scheduleId == updated.scheduleId,
+          );
           if (index >= 0) {
             _schedules[index] = updated;
             _schedules.sort((a, b) => a.takeTime.compareTo(b.takeTime));
@@ -252,9 +254,9 @@ class _HomeContentState extends State<HomeContent> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('스케줄 수정 실패: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('스케줄 수정 실패: ${e.message}')));
       }
     }
   }
@@ -308,40 +310,42 @@ class _HomeContentState extends State<HomeContent> {
               : RefreshIndicator(
                   onRefresh: _loadTodaySchedules,
                   child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              const Text(
-                '오늘의 복약 스케줄',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2C3E50),
+                    padding: const EdgeInsets.all(24),
+                    children: [
+                      const Text(
+                        '오늘의 복약 스케줄',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      if (_schedules.isEmpty)
+                        const Text('오늘 예정된 복약 스케줄이 없습니다.')
+                      else
+                        ..._schedules.expand((schedule) {
+                          final log = _logsByScheduleId[schedule.scheduleId];
+                          return [
+                            HomeMedicationCard(
+                              key: ValueKey(schedule.scheduleId),
+                              time: schedule.takeTime,
+                              name: schedule.itemName,
+                              detail: schedule.dosage,
+                              isInitiallyTaken:
+                                  log?.status == IntakeStatus.taken,
+                              onTakenChanged: (isTaken) =>
+                                  _setTaken(schedule, isTaken),
+                              onEditSchedule: () => _editScheduleTime(schedule),
+                              onDeleteSchedule: () => _deleteSchedule(schedule),
+                            ),
+                            const SizedBox(height: 12),
+                          ];
+                        }),
+                      const SizedBox(height: 80), // 하단 여백
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              if (_schedules.isEmpty)
-                const Text('오늘 예정된 복약 스케줄이 없습니다.')
-              else
-                ..._schedules.expand((schedule) {
-                  final log = _logsByScheduleId[schedule.scheduleId];
-                  return [
-                    HomeMedicationCard(
-                      key: ValueKey(schedule.scheduleId),
-                      time: schedule.takeTime,
-                      name: schedule.itemName,
-                      detail: schedule.dosage,
-                      isInitiallyTaken: log?.status == IntakeStatus.taken,
-                      onTakenChanged: (isTaken) => _setTaken(schedule, isTaken),
-                      onEditSchedule: () => _editScheduleTime(schedule),
-                      onDeleteSchedule: () => _deleteSchedule(schedule),
-                    ),
-                    const SizedBox(height: 12),
-                  ];
-                }),
-              const SizedBox(height: 80), // 하단 여백
-            ],
-          ),
-        ),
         ),
       ],
     );
@@ -405,7 +409,7 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
+            color: Colors.grey.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -500,21 +504,22 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
             onTap: _isSaving
                 ? null
                 : () async {
-              final next = !isTaken;
-              setState(() {
-                isTaken = next; // 클릭할 때마다 상태 토글
-                _isSaving = true;
-              });
-              final saved = await widget.onTakenChanged?.call(next) ?? true;
-              if (mounted) {
-                setState(() {
-                  if (!saved) {
-                    isTaken = !next;
-                  }
-                  _isSaving = false;
-                });
-              }
-            },
+                    final next = !isTaken;
+                    setState(() {
+                      isTaken = next; // 클릭할 때마다 상태 토글
+                      _isSaving = true;
+                    });
+                    final saved =
+                        await widget.onTakenChanged?.call(next) ?? true;
+                    if (mounted) {
+                      setState(() {
+                        if (!saved) {
+                          isTaken = !next;
+                        }
+                        _isSaving = false;
+                      });
+                    }
+                  },
             child: Container(
               width: 28,
               height: 28,

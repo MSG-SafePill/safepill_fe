@@ -169,10 +169,6 @@ class ApiClient {
     } catch (_) {
       // Keep raw response body for legacy string error responses.
     }
-    throw ApiException(
-      response.statusCode,
-      message,
-      code: code,
-    );
+    throw ApiException(response.statusCode, message, code: code);
   }
 }

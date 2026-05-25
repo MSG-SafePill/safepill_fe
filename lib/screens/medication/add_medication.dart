@@ -523,8 +523,8 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
           color: item.registered
               ? Colors.grey.shade100
               : isSelected
-                  ? const Color(0xFFE3F2FD)
-                  : Colors.white,
+              ? const Color(0xFFE3F2FD)
+              : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? const Color(0xFF2A8DE5) : Colors.grey[300]!,

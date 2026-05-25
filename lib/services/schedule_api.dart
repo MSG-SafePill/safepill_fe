@@ -2,10 +2,7 @@ import 'dart:convert';
 
 import 'api_client.dart';
 
-enum IntakeStatus {
-  taken,
-  skipped,
-}
+enum IntakeStatus { taken, skipped }
 
 class IntakeSchedule {
   final int scheduleId;
@@ -85,11 +82,7 @@ class ScheduleApi {
     final response = await _apiClient.post(
       '/api/schedules/$regId',
       auth: true,
-      body: {
-        'takeTime': takeTime,
-        'daysOfWeek': daysOfWeek,
-        'dosage': dosage,
-      },
+      body: {'takeTime': takeTime, 'daysOfWeek': daysOfWeek, 'dosage': dosage},
     );
     return _parseScheduleList(response.body);
   }
@@ -118,14 +111,21 @@ class ScheduleApi {
     List<String>? daysOfWeek,
     String? dosage,
   }) async {
+    final body = <String, Object>{};
+    if (takeTime != null) {
+      body['takeTime'] = takeTime;
+    }
+    if (daysOfWeek != null) {
+      body['daysOfWeek'] = daysOfWeek;
+    }
+    if (dosage != null) {
+      body['dosage'] = dosage;
+    }
+
     final response = await _apiClient.patch(
       '/api/schedules/$scheduleId',
       auth: true,
-      body: {
-        if (takeTime != null) 'takeTime': takeTime,
-        if (daysOfWeek != null) 'daysOfWeek': daysOfWeek,
-        if (dosage != null) 'dosage': dosage,
-      },
+      body: body,
     );
     return IntakeSchedule.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -145,7 +145,9 @@ class ScheduleApi {
         if (actualTime != null) 'actualTime': actualTime.toIso8601String(),
       },
     );
-    return IntakeLog.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    return IntakeLog.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
   }
 
   Future<IntakeLog> updateLog({
@@ -161,7 +163,9 @@ class ScheduleApi {
         if (actualTime != null) 'actualTime': actualTime.toIso8601String(),
       },
     );
-    return IntakeLog.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    return IntakeLog.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
   }
 
   Future<List<IntakeLog>> getLogsByDate(DateTime date) async {

@@ -2,10 +2,7 @@ import 'dart:convert';
 
 import 'api_client.dart';
 
-enum ChatSenderRole {
-  user,
-  system,
-}
+enum ChatSenderRole { user, system }
 
 class ChatSession {
   final int sessionId;
@@ -43,9 +40,7 @@ class ChatMessage {
     return ChatMessage(
       messageId: (json['messageId'] as num).toInt(),
       sessionId: (json['sessionId'] as num).toInt(),
-      senderRole: role == 'user'
-          ? ChatSenderRole.user
-          : ChatSenderRole.system,
+      senderRole: role == 'user' ? ChatSenderRole.user : ChatSenderRole.system,
       contents: json['contents'] as String? ?? '',
       createdAt: _parseDateTime(json['createdAt'] as String?),
     );

@@ -218,7 +218,11 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
                 item.manufacturer,
               ].whereType<String>().join(' | '),
             ),
-            trailing: Icon(item.itemId == null ? Icons.chevron_right : Icons.add_circle_outline),
+            trailing: Icon(
+              item.itemId == null
+                  ? Icons.chevron_right
+                  : Icons.add_circle_outline,
+            ),
           ),
         ),
       ),
@@ -245,7 +249,10 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
             child: Column(
               children: [
                 ListTile(
-                  leading: const Icon(Icons.receipt_long, color: Color(0xFF2A8DE5)),
+                  leading: const Icon(
+                    Icons.receipt_long,
+                    color: Color(0xFF2A8DE5),
+                  ),
                   title: Text(item.medicineName),
                   subtitle: Text(
                     [
@@ -264,7 +271,8 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                     child: DropdownButtonFormField<String>(
-                      value: _selectedOcrCandidates[item.medicineName]?.selectionKey,
+                      initialValue: _selectedOcrCandidates[item.medicineName]
+                          ?.selectionKey,
                       decoration: InputDecoration(
                         labelText: '등록 후보 선택',
                         filled: true,
@@ -294,14 +302,14 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
                           if (candidate != null) {
                             _selectedOcrCandidates[item.medicineName] =
                                 MedicationMatchCandidate(
-                              itemType: candidate.itemType == 'SUPPLEMENT'
-                                  ? SearchItemType.supplement
-                                  : SearchItemType.medicine,
-                              itemId: candidate.itemId,
-                              itemName: candidate.itemName,
-                              manufacturer: candidate.manufacturer,
-                              score: candidate.score,
-                            );
+                                  itemType: candidate.itemType == 'SUPPLEMENT'
+                                      ? SearchItemType.supplement
+                                      : SearchItemType.medicine,
+                                  itemId: candidate.itemId,
+                                  itemName: candidate.itemName,
+                                  manufacturer: candidate.manufacturer,
+                                  score: candidate.score,
+                                );
                           }
                         });
                       },
@@ -312,7 +320,9 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
           ),
         ),
       ),
-      if (_prescriptionItems.any((item) => item.matchCandidates.isNotEmpty)) ...[
+      if (_prescriptionItems.any(
+        (item) => item.matchCandidates.isNotEmpty,
+      )) ...[
         const SizedBox(height: 12),
         ElevatedButton.icon(
           onPressed: _isRegistering ? null : _registerSelectedOcrItems,
@@ -374,7 +384,9 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
     await _registerSelections(selections);
   }
 
-  Future<void> _registerSelections(List<OcrRegistrationSelection> selections) async {
+  Future<void> _registerSelections(
+    List<OcrRegistrationSelection> selections,
+  ) async {
     setState(() => _isRegistering = true);
     try {
       final results = await _ocrRegistrationApi.registerSelections(selections);
@@ -385,9 +397,9 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('등록 실패: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('등록 실패: ${e.message}')));
       }
     } finally {
       if (mounted) {

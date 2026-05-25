@@ -39,9 +39,9 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('약장 조회 실패: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('약장 조회 실패: ${e.message}')));
       }
     } finally {
       if (mounted) {
@@ -61,9 +61,9 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('삭제 실패: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('삭제 실패: ${e.message}')));
       }
     }
   }
@@ -81,15 +81,14 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
   Widget build(BuildContext context) {
     // [탭 제어기: 전체, 처방약, 영양제 3개 탭 구성]
     return DefaultTabController(
-      length: 3, 
+      length: 3,
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FA), // 본문 배경색 (연한 회색)
-        
         // [상단 앱바 및 탭 메뉴] - 이미지 7 디자인 적용
         appBar: AppBar(
           backgroundColor: Colors.white, // 앱바 배경색 (흰색)
           elevation: 1, // 이미지 7처럼 약간의 그림자 추가
-          
+
           automaticallyImplyLeading: false, // 👈 ✨ [핵심 수정] 뒤로가기 버튼을 강제로 제거합니다.
 
           title: const Text(
@@ -102,16 +101,21 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.health_and_safety, color: Color(0xFF2A8DE5)),
+              icon: const Icon(
+                Icons.health_and_safety,
+                color: Color(0xFF2A8DE5),
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AnalysisResult()),
+                  MaterialPageRoute(
+                    builder: (context) => const AnalysisResult(),
+                  ),
                 );
               },
             ),
           ],
-          
+
           // 이미지 7처럼 하단 탭과 여백을 주고 싶다면, 여기에 padding을 주는 것보다
           // AppBar.bottom 보다는 body의 Column 상단에 배치하는 게 낫습니다.
           // 일단은 AppBar.bottom으로 구현하고, 여백을 조절하겠습니다.
@@ -121,7 +125,10 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
             indicatorColor: Color(0xFF2A8DE5), // 밑줄 컬러
             indicatorWeight: 3,
             labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            unselectedLabelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
+            unselectedLabelStyle: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.normal,
+            ),
             tabs: [
               Tab(text: '전체'),
               Tab(text: '처방약'),
@@ -138,7 +145,10 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
 
             // 1. 상단 검색창 (이미지 7 스타일)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20.0,
+                vertical: 15.0,
+              ),
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
@@ -160,12 +170,14 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : TabBarView(
-                children: [
-                  _buildPillList(_filteredItems(null)),
-                  _buildPillList(_filteredItems(SearchItemType.medicine)),
-                  _buildPillList(_filteredItems(SearchItemType.supplement)),
-                ],
-              ),
+                      children: [
+                        _buildPillList(_filteredItems(null)),
+                        _buildPillList(_filteredItems(SearchItemType.medicine)),
+                        _buildPillList(
+                          _filteredItems(SearchItemType.supplement),
+                        ),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -175,13 +187,15 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const AddMedicationScreen()),
+              MaterialPageRoute(
+                builder: (context) => const AddMedicationScreen(),
+              ),
             ).then((_) => _loadMyPills());
           },
           backgroundColor: const Color(0xFF2A8DE5),
           shape: const CircleBorder(),
-          elevation: 4, 
-          child: const Icon(Icons.add, color: Colors.white, size: 35), 
+          elevation: 4,
+          child: const Icon(Icons.add, color: Colors.white, size: 35),
         ),
       ),
     );
@@ -221,7 +235,15 @@ class PillCard extends StatefulWidget {
   final bool isWarning; // 소진 임박 등 경고 상태 체크
   final VoidCallback? onDelete;
 
-  const PillCard({super.key, required this.icon, required this.name, required this.days, required this.instruction, this.isWarning = false, this.onDelete});
+  const PillCard({
+    super.key,
+    required this.icon,
+    required this.name,
+    required this.days,
+    required this.instruction,
+    this.isWarning = false,
+    this.onDelete,
+  });
 
   @override
   State<PillCard> createState() => _PillCardState();
@@ -239,28 +261,58 @@ class _PillCardState extends State<PillCard> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         // 경고 상태일 경우 좌측 빨간색 테두리 적용
-        border: widget.isWarning ? const Border(left: BorderSide(color: Color(0xFFFF5252), width: 5)) : null,
+        border: widget.isWarning
+            ? const Border(left: BorderSide(color: Color(0xFFFF5252), width: 5))
+            : null,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
         children: [
           // 1. 기본 약품 정보 표시 영역
           ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 5,
+            ),
             leading: CircleAvatar(
               backgroundColor: const Color(0xFFFFF8E1),
               child: Text(widget.icon, style: const TextStyle(fontSize: 20)),
             ),
             title: Row(
               children: [
-                Expanded(child: Text(widget.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                Expanded(
+                  child: Text(
+                    widget.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
                 if (widget.isWarning)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(10)),
-                    child: const Text('소진 임박', style: TextStyle(color: Color(0xFFFF5252), fontSize: 10, fontWeight: FontWeight.bold)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      '소진 임박',
+                      style: TextStyle(
+                        color: Color(0xFFFF5252),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -269,8 +321,22 @@ class _PillCardState extends State<PillCard> {
                 style: const TextStyle(color: Colors.grey, fontSize: 12),
                 children: [
                   const TextSpan(text: '남은 약: '),
-                  TextSpan(text: widget.days, style: TextStyle(color: widget.isWarning ? const Color(0xFFFF5252) : Colors.black, fontWeight: FontWeight.bold)),
-                  TextSpan(text: '  •  ${widget.instruction}', style: const TextStyle(color: Color(0xFF2A8DE5), fontWeight: FontWeight.bold)),
+                  TextSpan(
+                    text: widget.days,
+                    style: TextStyle(
+                      color: widget.isWarning
+                          ? const Color(0xFFFF5252)
+                          : Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextSpan(
+                    text: '  •  ${widget.instruction}',
+                    style: const TextStyle(
+                      color: Color(0xFF2A8DE5),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -284,12 +350,16 @@ class _PillCardState extends State<PillCard> {
               },
             ),
           ),
-          
+
           // 2. 삭제/취소 메뉴 (상태값에 따라 조건부 렌더링)
           if (_showDeleteMenu)
             Column(
               children: [
-                const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+                const Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Color(0xFFEEEEEE),
+                ),
                 Row(
                   children: [
                     Expanded(
@@ -300,10 +370,20 @@ class _PillCardState extends State<PillCard> {
                             _showDeleteMenu = false;
                           });
                         },
-                        child: const Text('삭제', style: TextStyle(color: Color(0xFFFF5252), fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          '삭제',
+                          style: TextStyle(
+                            color: Color(0xFFFF5252),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
-                    Container(width: 1, height: 20, color: const Color(0xFFEEEEEE)),
+                    Container(
+                      width: 1,
+                      height: 20,
+                      color: const Color(0xFFEEEEEE),
+                    ),
                     Expanded(
                       child: TextButton(
                         onPressed: () {
@@ -311,7 +391,13 @@ class _PillCardState extends State<PillCard> {
                             _showDeleteMenu = false; // 취소 누르면 메뉴 닫기
                           });
                         },
-                        child: const Text('취소', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          '취소',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],

@@ -2,10 +2,7 @@ import 'dart:convert';
 
 import 'api_client.dart';
 
-enum SearchItemType {
-  medicine,
-  supplement,
-}
+enum SearchItemType { medicine, supplement }
 
 class MedicationSearchItem {
   final SearchItemType type;
@@ -24,7 +21,8 @@ class MedicationSearchItem {
     this.registered = false,
   });
 
-  String get requestType => type == SearchItemType.medicine ? 'MEDICINE' : 'SUPPLEMENT';
+  String get requestType =>
+      type == SearchItemType.medicine ? 'MEDICINE' : 'SUPPLEMENT';
 }
 
 class MedicationSearchPage {
@@ -100,7 +98,9 @@ class CabinetItem {
       efficacy: json['efficacy'] as String?,
       precautions: json['precautions'] as String?,
       ingredients: (json['ingredients'] as List<dynamic>? ?? [])
-          .map((item) => CabinetIngredient.fromJson(item as Map<String, dynamic>))
+          .map(
+            (item) => CabinetIngredient.fromJson(item as Map<String, dynamic>),
+          )
           .toList(),
     );
   }
@@ -135,13 +135,10 @@ class MedicationApi {
     final response = await _apiClient.get(
       '/api/search',
       auth: auth,
-      query: {
-        'keyword': trimmed,
-        'page': '$page',
-        'size': '$size',
-      },
+      query: {'keyword': trimmed, 'page': '$page', 'size': '$size'},
     );
-    final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+    final Map<String, dynamic> data =
+        jsonDecode(response.body) as Map<String, dynamic>;
     final medicines = (data['medicines'] as List<dynamic>? ?? []).map((item) {
       final map = item as Map<String, dynamic>;
       return MedicationSearchItem(
@@ -153,7 +150,9 @@ class MedicationApi {
         registered: map['registered'] as bool? ?? false,
       );
     });
-    final supplements = (data['supplements'] as List<dynamic>? ?? []).map((item) {
+    final supplements = (data['supplements'] as List<dynamic>? ?? []).map((
+      item,
+    ) {
       final map = item as Map<String, dynamic>;
       return MedicationSearchItem(
         type: SearchItemType.supplement,
@@ -176,10 +175,7 @@ class MedicationApi {
     await _apiClient.post(
       '/api/mypills',
       auth: true,
-      body: {
-        'type': item.requestType,
-        'itemId': item.id,
-      },
+      body: {'type': item.requestType, 'itemId': item.id},
     );
   }
 
@@ -201,4 +197,3 @@ SearchItemType _parseItemType(String? value) {
       ? SearchItemType.supplement
       : SearchItemType.medicine;
 }
-

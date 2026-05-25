@@ -26,9 +26,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     if (loginId.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('아이디와 비밀번호를 모두 입력해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('아이디와 비밀번호를 모두 입력해주세요.')));
       return;
     }
 
@@ -39,10 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final response = await _apiClient.post(
         '/api/users/login',
-        body: {
-          'loginId': loginId,
-          'password': password,
-        },
+        body: {'loginId': loginId, 'password': password},
       );
 
       final token = response.body;
@@ -57,15 +54,15 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('로그인 실패: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('로그인 실패: ${e.message}')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('서버와 연결할 수 없습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('서버와 연결할 수 없습니다.')));
       }
     } finally {
       if (mounted) {
@@ -94,7 +91,14 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 40),
-              const Text('Welcome!', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black)),
+              const Text(
+                'Welcome!',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
               const SizedBox(height: 50),
 
               // 5. 입력 폼에 아까 만든 빨대(Controller)를 꽂아줍니다!
@@ -107,7 +111,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 alignment: Alignment.centerLeft,
                 child: TextButton(
                   onPressed: () {},
-                  child: const Text('Forgot password?', style: TextStyle(color: Color(0xFF2A8DE5), fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Forgot password?',
+                    style: TextStyle(
+                      color: Color(0xFF2A8DE5),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -120,12 +130,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _isLoading ? null : _login,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2A8DE5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
                     elevation: 0,
                   ),
                   child: Text(
                     _isLoading ? '로그인 중...' : 'Login',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -134,7 +150,10 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Not a member? ', style: TextStyle(color: Colors.grey)),
+                  const Text(
+                    'Not a member? ',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                   GestureDetector(
                     onTap: () {
                       // 👇 회원가입 화면으로 이동하는 코드!
@@ -143,13 +162,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         MaterialPageRoute(builder: (context) => SignupScreen()),
                       );
                     },
-                    child: const Text('Register now', style: TextStyle(color: Color(0xFF2A8DE5), fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Register now',
+                      style: TextStyle(
+                        color: Color(0xFF2A8DE5),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 50),
 
-              const Text('Or continue with', style: TextStyle(color: Colors.grey)),
+              const Text(
+                'Or continue with',
+                style: TextStyle(color: Colors.grey),
+              ),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -160,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(width: 20),
                   _buildSocialButton('f', const Color(0xFF1877F2)),
                 ],
-              )
+              ),
             ],
           ),
         ),
@@ -169,9 +197,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // --- [UI 재사용 컴포넌트들] ---
-  
+
   // 💡 빨대(controller)를 받을 수 있게 수정했습니다!
-  Widget _buildTextField(String hint, bool isPassword, TextEditingController controller) {
+  Widget _buildTextField(
+    String hint,
+    bool isPassword,
+    TextEditingController controller,
+  ) {
     return TextField(
       controller: controller, // 👈 여기에 빨대를 꽂습니다!
       obscureText: isPassword,
@@ -179,18 +211,31 @@ class _LoginScreenState extends State<LoginScreen> {
         hintText: hint,
         filled: true,
         fillColor: const Color(0xFFF8F9FA),
-        suffixIcon: isPassword ? const Icon(Icons.visibility_off, color: Colors.grey) : null,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+        suffixIcon: isPassword
+            ? const Icon(Icons.visibility_off, color: Colors.grey)
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
       ),
     );
   }
 
   Widget _buildSocialButton(String label, Color color) {
     return Container(
-      width: 50, height: 50,
+      width: 50,
+      height: 50,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       child: Center(
-        child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }

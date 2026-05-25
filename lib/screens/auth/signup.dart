@@ -15,11 +15,11 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _birthController = TextEditingController();
   final ApiClient _apiClient = ApiClient();
-  
-  String _selectedGender = 'MALE'; 
-  
+
+  String _selectedGender = 'MALE';
+
   // 💡 [핵심 변수] 아이디 중복 확인을 통과했는지 기억하는 변수!
-  bool _isIdChecked = false; 
+  bool _isIdChecked = false;
 
   @override
   void initState() {
@@ -38,23 +38,43 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _checkDuplicateId() async {
     final loginId = _idController.text.trim();
     if (loginId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('아이디를 먼저 입력해주세요.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('아이디를 먼저 입력해주세요.')));
       return;
     }
 
     try {
       await _apiClient.get('/api/users/check-id', query: {'loginId': loginId});
-      setState(() { _isIdChecked = true; });
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isIdChecked = true;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('사용 가능한 아이디입니다.'), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text('사용 가능한 아이디입니다.'),
+          backgroundColor: Colors.green,
+        ),
       );
     } on ApiException catch (e) {
-      setState(() { _isIdChecked = false; });
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isIdChecked = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message), backgroundColor: Colors.red),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('서버 통신 에러가 발생했습니다.')));
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('서버 통신 에러가 발생했습니다.')));
     }
   }
 
@@ -63,15 +83,22 @@ class _SignupScreenState extends State<SignupScreen> {
     // [보안] 중복 확인 안 했으면 아예 서버로 안 보냄!
     if (!_isIdChecked) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('아이디 중복 확인을 진행해주세요!'), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text('아이디 중복 확인을 진행해주세요!'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
 
-    if (_idController.text.isEmpty || _passwordController.text.isEmpty || 
-        _nameController.text.isEmpty || _emailController.text.isEmpty || 
+    if (_idController.text.isEmpty ||
+        _passwordController.text.isEmpty ||
+        _nameController.text.isEmpty ||
+        _emailController.text.isEmpty ||
         _birthController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('모든 정보를 입력해주세요!')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('모든 정보를 입력해주세요!')));
       return;
     }
 
@@ -89,16 +116,22 @@ class _SignupScreenState extends State<SignupScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('회원가입 성공! 로그인해주세요.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('회원가입 성공! 로그인해주세요.')));
         Navigator.pop(context);
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('가입 실패: ${e.message}')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('가입 실패: ${e.message}')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('서버와 연결할 수 없습니다.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('서버와 연결할 수 없습니다.')));
       }
     }
   }
@@ -121,7 +154,10 @@ class _SignupScreenState extends State<SignupScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
-        title: const Text('Register', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Register',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -129,32 +165,49 @@ class _SignupScreenState extends State<SignupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Create Account', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+              const Text(
+                'Create Account',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 30),
 
               // 💡 아이디 입력창 + 중복확인 버튼 나란히 배치!
               Row(
                 children: [
                   Expanded(
-                    child: _buildTextField('아이디 (loginId)', false, _idController),
+                    child: _buildTextField(
+                      '아이디 (loginId)',
+                      false,
+                      _idController,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton(
                     onPressed: _checkDuplicateId,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _isIdChecked ? Colors.green : Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      backgroundColor: _isIdChecked
+                          ? Colors.green
+                          : Colors.black,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 18,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
                     ),
                     child: Text(
                       _isIdChecked ? '확인 완료' : '중복 확인',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 15),
-              
+
               _buildTextField('비밀번호', true, _passwordController),
               const SizedBox(height: 15),
               _buildTextField('이름', false, _nameController),
@@ -179,7 +232,9 @@ class _SignupScreenState extends State<SignupScreen> {
                       DropdownMenuItem(value: 'FEMALE', child: Text('여성')),
                     ],
                     onChanged: (value) {
-                      setState(() { if (value != null) _selectedGender = value; });
+                      setState(() {
+                        if (value != null) _selectedGender = value;
+                      });
                     },
                   ),
                 ),
@@ -193,10 +248,19 @@ class _SignupScreenState extends State<SignupScreen> {
                   onPressed: _signup, // 중복 확인 안 했으면 여기서 튕겨냅니다!
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2A8DE5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
                     elevation: 0,
                   ),
-                  child: const Text('Sign Up', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Sign Up',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -206,7 +270,11 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildTextField(String hint, bool isPassword, TextEditingController controller) {
+  Widget _buildTextField(
+    String hint,
+    bool isPassword,
+    TextEditingController controller,
+  ) {
     return TextField(
       controller: controller,
       obscureText: isPassword,
@@ -214,7 +282,10 @@ class _SignupScreenState extends State<SignupScreen> {
         hintText: hint,
         filled: true,
         fillColor: const Color(0xFFF8F9FA),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
       ),
     );
   }

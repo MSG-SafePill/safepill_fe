@@ -25,8 +25,10 @@ class InteractionRuleResult {
 
   factory InteractionRuleResult.fromJson(Map<String, dynamic> json) {
     return InteractionRuleResult(
-      itemNameA: json['itemNameA'] as String? ?? json['medicineNameA'] as String?,
-      itemNameB: json['itemNameB'] as String? ?? json['medicineNameB'] as String?,
+      itemNameA:
+          json['itemNameA'] as String? ?? json['medicineNameA'] as String?,
+      itemNameB:
+          json['itemNameB'] as String? ?? json['medicineNameB'] as String?,
       itemTypeA: json['itemTypeA'] as String?,
       itemTypeB: json['itemTypeB'] as String?,
       ingredientNameA: json['ingredientNameA'] as String?,
@@ -104,13 +106,19 @@ class AiInteractionAnalysis {
       riskLevel: json['riskLevel'] as String? ?? 'NONE',
       summary: json['summary'] as String? ?? '',
       warnings: (json['warnings'] as List<dynamic>? ?? [])
-          .map((item) => AiInteractionWarning.fromJson(item as Map<String, dynamic>))
+          .map(
+            (item) =>
+                AiInteractionWarning.fromJson(item as Map<String, dynamic>),
+          )
           .toList(),
       recommendations: (json['recommendations'] as List<dynamic>? ?? [])
           .map((item) => item.toString())
           .toList(),
       evidence: (json['evidence'] as List<dynamic>? ?? [])
-          .map((item) => AiInteractionEvidence.fromJson(item as Map<String, dynamic>))
+          .map(
+            (item) =>
+                AiInteractionEvidence.fromJson(item as Map<String, dynamic>),
+          )
           .toList(),
       disclaimer: json['disclaimer'] as String? ?? '',
     );
@@ -118,7 +126,8 @@ class AiInteractionAnalysis {
 }
 
 class InteractionApi {
-  InteractionApi({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+  InteractionApi({ApiClient? apiClient})
+    : _apiClient = apiClient ?? ApiClient();
 
   final ApiClient _apiClient;
 
@@ -129,7 +138,10 @@ class InteractionApi {
     );
     final items = jsonDecode(response.body) as List<dynamic>;
     return items
-        .map((item) => InteractionRuleResult.fromJson(item as Map<String, dynamic>))
+        .map(
+          (item) =>
+              InteractionRuleResult.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
   }
 

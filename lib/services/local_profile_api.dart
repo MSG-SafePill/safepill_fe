@@ -4,15 +4,12 @@ class LocalUserProfile {
   final String loginId;
   final String nickname;
 
-  LocalUserProfile({
-    required this.loginId,
-    required this.nickname,
-  });
+  LocalUserProfile({required this.loginId, required this.nickname});
 }
 
 class LocalProfileApi {
   LocalProfileApi({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   static const String loginIdKey = 'profile_login_id';
   static const String nicknameKey = 'profile_nickname';

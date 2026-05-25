@@ -106,5 +106,7 @@ class ProfileApi {
 }
 
 List<String> _stringList(Object? value) {
-  return (value as List<dynamic>? ?? []).map((item) => item.toString()).toList();
+  return (value as List<dynamic>? ?? [])
+      .map((item) => item.toString())
+      .toList();
 }

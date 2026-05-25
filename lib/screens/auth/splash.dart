@@ -31,14 +31,12 @@ class _SplashScreenState extends State<SplashScreen> {
     if (mounted) {
       if (token != null) {
         // 🎉 토큰 발견! 로그인 건너뛰고 바로 홈 화면으로 직행!
-        print("🔓 금고에서 토큰 발견! 자동 로그인 성공!");
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       } else {
         // ❌ 토큰 없음! 처음 왔거나 로그아웃한 유저. 랜딩 화면으로!
-        print("🔒 토큰 없음. 랜딩 화면으로 이동.");
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const LandingScreen()),
