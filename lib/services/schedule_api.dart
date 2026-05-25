@@ -26,7 +26,8 @@ class IntakeSchedule {
       scheduleId: (json['scheduleId'] as num).toInt(),
       regId: (json['regId'] as num).toInt(),
       itemName: json['itemName'] as String? ?? '이름 없음',
-      takeTime: json['takeTime'] as String? ?? '',
+      takeTime:
+          (json['timeSlot'] as String?) ?? (json['takeTime'] as String?) ?? '',
       dayOfWeek: json['dayOfWeek'] as String? ?? '',
       dosage: json['dosage'] as String? ?? '',
     );
@@ -60,7 +61,8 @@ class IntakeLog {
       scheduleId: (json['scheduleId'] as num).toInt(),
       regId: (json['regId'] as num).toInt(),
       itemName: json['itemName'] as String? ?? '이름 없음',
-      takeTime: json['takeTime'] as String? ?? '',
+      takeTime:
+          (json['timeSlot'] as String?) ?? (json['takeTime'] as String?) ?? '',
       dosage: json['dosage'] as String? ?? '',
       status: _parseIntakeStatus(json['status'] as String?),
       actualTime: _parseDateTime(json['actualTime'] as String?),
@@ -82,7 +84,12 @@ class ScheduleApi {
     final response = await _apiClient.post(
       '/api/schedules/$regId',
       auth: true,
-      body: {'takeTime': takeTime, 'daysOfWeek': daysOfWeek, 'dosage': dosage},
+      body: {
+        'timeSlot': takeTime,
+        'takeTime': takeTime,
+        'daysOfWeek': daysOfWeek,
+        'dosage': dosage,
+      },
     );
     return _parseScheduleList(response.body);
   }
@@ -113,6 +120,7 @@ class ScheduleApi {
   }) async {
     final body = <String, Object>{};
     if (takeTime != null) {
+      body['timeSlot'] = takeTime;
       body['takeTime'] = takeTime;
     }
     if (daysOfWeek != null) {
@@ -185,7 +193,8 @@ class ScheduleApi {
   }
 
   List<IntakeSchedule> _parseScheduleList(String body) {
-    final items = jsonDecode(body) as List<dynamic>;
+    final decoded = jsonDecode(body);
+    final items = decoded is List<dynamic> ? decoded : <dynamic>[decoded];
     return items
         .map((item) => IntakeSchedule.fromJson(item as Map<String, dynamic>))
         .toList();
