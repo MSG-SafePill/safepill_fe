@@ -1,7 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../../services/api_client.dart';
+import '../../services/notification_setting_api.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -13,14 +13,16 @@ class NotificationSettingsScreen extends StatefulWidget {
 
 class _NotificationSettingsScreenState
     extends State<NotificationSettingsScreen> {
-  static const String _settingsKey = 'notification_settings';
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final NotificationSettingApi _notificationSettingApi =
+      NotificationSettingApi();
 
   // --- 상태 변수 (토글 스위치 및 시간) ---
   bool _isAllAlarmOn = true;
   bool _isSoundVibrateOn = false;
   bool _isRefillAlarmOn = true;
   int _snoozeMinutes = 10;
+  bool _isLoading = true;
+  bool _isSaving = false;
 
   // 초기 시간 설정값 (TimeOfDay 객체 사용)
   TimeOfDay _morningTime = const TimeOfDay(hour: 8, minute: 30);
@@ -70,56 +72,71 @@ class _NotificationSettingsScreenState
   }
 
   Future<void> _loadSettings() async {
-    final raw = await _storage.read(key: _settingsKey);
-    if (raw == null || raw.isEmpty) {
-      return;
-    }
     try {
-      final data = jsonDecode(raw) as Map<String, dynamic>;
+      final settings = await _notificationSettingApi.getSettings();
       if (!mounted) {
         return;
       }
-      setState(() {
-        _isAllAlarmOn = data['allAlarm'] as bool? ?? _isAllAlarmOn;
-        _isSoundVibrateOn = data['soundVibrate'] as bool? ?? _isSoundVibrateOn;
-        _isRefillAlarmOn = data['refillAlarm'] as bool? ?? _isRefillAlarmOn;
-        _snoozeMinutes =
-            (data['snoozeMinutes'] as num?)?.toInt() ?? _snoozeMinutes;
-        _morningTime =
-            _parseStoredTime(data['morningTime'] as String?) ?? _morningTime;
-        _lunchTime =
-            _parseStoredTime(data['lunchTime'] as String?) ?? _lunchTime;
-        _dinnerTime =
-            _parseStoredTime(data['dinnerTime'] as String?) ?? _dinnerTime;
-        _nightTime =
-            _parseStoredTime(data['nightTime'] as String?) ?? _nightTime;
-      });
-    } catch (_) {
-      await _storage.delete(key: _settingsKey);
+      _applySettings(settings);
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('알림 설정 조회 실패: ${e.message}')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   Future<void> _saveSettings() async {
-    await _storage.write(
-      key: _settingsKey,
-      value: jsonEncode({
-        'allAlarm': _isAllAlarmOn,
-        'soundVibrate': _isSoundVibrateOn,
-        'refillAlarm': _isRefillAlarmOn,
-        'snoozeMinutes': _snoozeMinutes,
-        'morningTime': _timeToStorage(_morningTime),
-        'lunchTime': _timeToStorage(_lunchTime),
-        'dinnerTime': _timeToStorage(_dinnerTime),
-        'nightTime': _timeToStorage(_nightTime),
-      }),
+    setState(() => _isSaving = true);
+    final setting = NotificationSetting(
+      allAlarmEnabled: _isAllAlarmOn,
+      soundVibrateEnabled: _isSoundVibrateOn,
+      refillAlarmEnabled: _isRefillAlarmOn,
+      snoozeMinutes: _snoozeMinutes,
+      morningTime: _timeToStorage(_morningTime),
+      lunchTime: _timeToStorage(_lunchTime),
+      dinnerTime: _timeToStorage(_dinnerTime),
+      nightTime: _timeToStorage(_nightTime),
     );
-    if (!mounted) {
-      return;
+    try {
+      final saved = await _notificationSettingApi.saveSettings(setting);
+      if (!mounted) {
+        return;
+      }
+      _applySettings(saved);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('알림 설정이 저장되었습니다.')));
+      Navigator.pop(context);
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('알림 설정 저장 실패: ${e.message}')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('알림 설정이 저장되었습니다.')));
-    Navigator.pop(context);
+  }
+
+  void _applySettings(NotificationSetting settings) {
+    setState(() {
+      _isAllAlarmOn = settings.allAlarmEnabled;
+      _isSoundVibrateOn = settings.soundVibrateEnabled;
+      _isRefillAlarmOn = settings.refillAlarmEnabled;
+      _snoozeMinutes = settings.snoozeMinutes;
+      _morningTime = _parseStoredTime(settings.morningTime) ?? _morningTime;
+      _lunchTime = _parseStoredTime(settings.lunchTime) ?? _lunchTime;
+      _dinnerTime = _parseStoredTime(settings.dinnerTime) ?? _dinnerTime;
+      _nightTime = _parseStoredTime(settings.nightTime) ?? _nightTime;
+    });
   }
 
   Future<void> _showSnoozePicker() async {
@@ -167,125 +184,131 @@ class _NotificationSettingsScreenState
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. 전체 알림 켜기 카드
-            _buildMainToggleCard(),
-            const SizedBox(height: 30),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. 전체 알림 켜기 카드
+                  _buildMainToggleCard(),
+                  const SizedBox(height: 30),
 
-            // 2. 기본 알림 시간대 섹션
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '기본 알림 시간대',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    '패턴 맞춤형',
-                    style: TextStyle(
-                      color: Color(0xFF2A8DE5),
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
+                  // 2. 기본 알림 시간대 섹션
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '기본 알림 시간대',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {},
+                        child: const Text(
+                          '패턴 맞춤형',
+                          style: TextStyle(
+                            color: Color(0xFF2A8DE5),
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  _buildWhiteCard([
+                    _buildTimeSettingRow(
+                      '☀️ 아침 식후',
+                      _morningTime,
+                      (t) => setState(() => _morningTime = t),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFF0F0F0)),
+                    _buildTimeSettingRow(
+                      '⛅ 점심 식후',
+                      _lunchTime,
+                      (t) => setState(() => _lunchTime = t),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFF0F0F0)),
+                    _buildTimeSettingRow(
+                      '🌙 저녁 식후',
+                      _dinnerTime,
+                      (t) => setState(() => _dinnerTime = t),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFF0F0F0)),
+                    _buildTimeSettingRow(
+                      '🛌 취침 전',
+                      _nightTime,
+                      (t) => setState(() => _nightTime = t),
+                    ),
+                  ]),
+                  const SizedBox(height: 30),
+
+                  // 3. 상세 설정 섹션
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 10, left: 5),
+                    child: Text(
+                      '상세 설정',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            _buildWhiteCard([
-              _buildTimeSettingRow(
-                '☀️ 아침 식후',
-                _morningTime,
-                (t) => setState(() => _morningTime = t),
-              ),
-              const Divider(height: 1, color: Color(0xFFF0F0F0)),
-              _buildTimeSettingRow(
-                '⛅ 점심 식후',
-                _lunchTime,
-                (t) => setState(() => _lunchTime = t),
-              ),
-              const Divider(height: 1, color: Color(0xFFF0F0F0)),
-              _buildTimeSettingRow(
-                '🌙 저녁 식후',
-                _dinnerTime,
-                (t) => setState(() => _dinnerTime = t),
-              ),
-              const Divider(height: 1, color: Color(0xFFF0F0F0)),
-              _buildTimeSettingRow(
-                '🛌 취침 전',
-                _nightTime,
-                (t) => setState(() => _nightTime = t),
-              ),
-            ]),
-            const SizedBox(height: 30),
+                  _buildWhiteCard([
+                    _buildSettingMenu(
+                      '스누즈 (미루기) 간격',
+                      '$_snoozeMinutes분 후',
+                      onTap: () {
+                        _showSnoozePicker();
+                      },
+                    ),
+                    const Divider(height: 1, color: Color(0xFFF0F0F0)),
+                    _buildToggleRow(
+                      '소리 및 진동 알림',
+                      '매너모드에서도 소리를 울립니다.',
+                      _isSoundVibrateOn,
+                      (val) => setState(() => _isSoundVibrateOn = val),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFF0F0F0)),
+                    _buildToggleRow(
+                      '약 소진 임박 알림',
+                      '약이 3일 치 이하로 남으면 알려줍니다.',
+                      _isRefillAlarmOn,
+                      (val) => setState(() => _isRefillAlarmOn = val),
+                    ),
+                  ]),
+                  const SizedBox(height: 40),
 
-            // 3. 상세 설정 섹션
-            const Padding(
-              padding: EdgeInsets.only(bottom: 10, left: 5),
-              child: Text(
-                '상세 설정',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  // 4. 저장 버튼 (사진 오른쪽에 있는 파란 버튼)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _saveSettings,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2A8DE5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        _isSaving ? '저장 중...' : '설정 저장하기',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
               ),
             ),
-            _buildWhiteCard([
-              _buildSettingMenu(
-                '스누즈 (미루기) 간격',
-                '$_snoozeMinutes분 후',
-                onTap: () {
-                  _showSnoozePicker();
-                },
-              ),
-              const Divider(height: 1, color: Color(0xFFF0F0F0)),
-              _buildToggleRow(
-                '소리 및 진동 알림',
-                '매너모드에서도 소리를 울립니다.',
-                _isSoundVibrateOn,
-                (val) => setState(() => _isSoundVibrateOn = val),
-              ),
-              const Divider(height: 1, color: Color(0xFFF0F0F0)),
-              _buildToggleRow(
-                '약 소진 임박 알림',
-                '약이 3일 치 이하로 남으면 알려줍니다.',
-                _isRefillAlarmOn,
-                (val) => setState(() => _isRefillAlarmOn = val),
-              ),
-            ]),
-            const SizedBox(height: 40),
-
-            // 4. 저장 버튼 (사진 오른쪽에 있는 파란 버튼)
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: () {
-                  _saveSettings();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2A8DE5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  '설정 저장하기',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
     );
   }
 
