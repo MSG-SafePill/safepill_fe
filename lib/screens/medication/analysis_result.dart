@@ -62,8 +62,7 @@ class _AnalysisResultState extends State<AnalysisResult> {
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: ListView(
                 children: [
                   // 1. 상태 요약 카드 (위험 / 안전)
                   Card(
@@ -173,19 +172,106 @@ class _AnalysisResultState extends State<AnalysisResult> {
                       ),
                     ),
 
-                  const Spacer(),
+                  if (analysis != null) ...[
+                    _InfoSection(
+                      title: '복약 관리 방법',
+                      icon: Icons.checklist_rounded,
+                      items: analysis.recommendations,
+                    ),
+                    _InfoSection(
+                      title: '복용 시간 안내',
+                      icon: Icons.schedule_rounded,
+                      items: analysis.scheduleRecommendations,
+                    ),
+                    _InfoSection(
+                      title: '음식/영양제 주의',
+                      icon: Icons.restaurant_rounded,
+                      items: analysis.foodWarnings,
+                    ),
+                    _InfoSection(
+                      title: '상담이 필요한 경우',
+                      icon: Icons.local_hospital_rounded,
+                      items: analysis.consultationGuidance,
+                    ),
+                  ],
 
                   // 3. 하단 경고 문구
                   Center(
                     child: Text(
-                      '최종 판단은 반드시 의사 또는 약사와 상담하십시오.',
+                      analysis?.disclaimer.isNotEmpty == true
+                          ? analysis!.disclaimer
+                          : '최종 판단은 반드시 의사 또는 약사와 상담하십시오.',
                       style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   const SizedBox(height: 20),
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _InfoSection extends StatelessWidget {
+  const _InfoSection({
+    required this.title,
+    required this.icon,
+    required this.items,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<String> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Colors.blueGrey),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• '),
+                    Expanded(
+                      child: Text(
+                        item,
+                        style: const TextStyle(fontSize: 15, height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

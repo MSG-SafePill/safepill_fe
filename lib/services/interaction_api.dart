@@ -85,6 +85,9 @@ class AiInteractionAnalysis {
   final String summary;
   final List<AiInteractionWarning> warnings;
   final List<String> recommendations;
+  final List<String> scheduleRecommendations;
+  final List<String> foodWarnings;
+  final List<String> consultationGuidance;
   final List<AiInteractionEvidence> evidence;
   final String disclaimer;
 
@@ -95,6 +98,9 @@ class AiInteractionAnalysis {
     required this.summary,
     this.warnings = const [],
     this.recommendations = const [],
+    this.scheduleRecommendations = const [],
+    this.foodWarnings = const [],
+    this.consultationGuidance = const [],
     this.evidence = const [],
     required this.disclaimer,
   });
@@ -114,6 +120,17 @@ class AiInteractionAnalysis {
       recommendations: (json['recommendations'] as List<dynamic>? ?? [])
           .map((item) => item.toString())
           .toList(),
+      scheduleRecommendations:
+          (json['scheduleRecommendations'] as List<dynamic>? ?? [])
+              .map((item) => item.toString())
+              .toList(),
+      foodWarnings: (json['foodWarnings'] as List<dynamic>? ?? [])
+          .map((item) => item.toString())
+          .toList(),
+      consultationGuidance:
+          (json['consultationGuidance'] as List<dynamic>? ?? [])
+              .map((item) => item.toString())
+              .toList(),
       evidence: (json['evidence'] as List<dynamic>? ?? [])
           .map(
             (item) =>
