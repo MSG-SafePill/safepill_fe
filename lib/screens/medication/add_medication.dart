@@ -25,6 +25,13 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   List<MedicationSearchItem> _searchResults = [];
   MedicationSearchItem? _selectedItem;
 
+  SearchItemType get _selectedType =>
+      isPrescription ? SearchItemType.medicine : SearchItemType.supplement;
+
+  List<MedicationSearchItem> get _visibleSearchResults => _searchResults
+      .where((item) => item.type == _selectedType)
+      .toList();
+
   @override
   void initState() {
     super.initState();
@@ -93,6 +100,12 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('내 약장에 추가할 약품을 선택해주세요.')));
+      return;
+    }
+    if (selectedItem.type != _selectedType) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('선택한 분류에 맞는 검색 결과를 다시 선택해주세요.')));
       return;
     }
     if (selectedItem.registered) {
@@ -258,7 +271,15 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
             ),
             if (_searchResults.isNotEmpty) ...[
               const SizedBox(height: 16),
-              ..._searchResults.map(_buildSearchResultTile),
+              if (_visibleSearchResults.isEmpty)
+                Text(
+                  isPrescription
+                      ? '검색된 의약품이 없습니다. 영양제 결과를 보려면 분류를 변경하세요.'
+                      : '검색된 영양제가 없습니다. 의약품 결과를 보려면 분류를 변경하세요.',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                )
+              else
+                ..._visibleSearchResults.map(_buildSearchResultTile),
             ],
             const SizedBox(height: 30),
 
@@ -270,7 +291,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                   child: _buildToggleButton(
                     '처방약 / 일반약',
                     isPrescription,
-                    () => setState(() => isPrescription = true),
+                    () => _selectCategory(SearchItemType.medicine),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -278,7 +299,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                   child: _buildToggleButton(
                     '영양제',
                     !isPrescription,
-                    () => setState(() => isPrescription = false),
+                    () => _selectCategory(SearchItemType.supplement),
                   ),
                 ),
               ],
@@ -446,6 +467,15 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
         ),
       ),
     );
+  }
+
+  void _selectCategory(SearchItemType type) {
+    setState(() {
+      isPrescription = type == SearchItemType.medicine;
+      if (_selectedItem?.type != type) {
+        _selectedItem = null;
+      }
+    });
   }
 
   Widget _buildTimeButton(String label, {bool isFullWidth = false}) {
