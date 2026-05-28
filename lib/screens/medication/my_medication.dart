@@ -213,7 +213,7 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
             (item) => PillCard(
               icon: item.type == SearchItemType.medicine ? '💊' : '🌿',
               name: item.itemName,
-              days: '등록됨',
+              days: item.supplyDays == null ? '미설정' : '${item.supplyDays}일',
               instruction: item.efficacy?.isNotEmpty == true
                   ? item.efficacy!
                   : item.manufacturer ?? '',

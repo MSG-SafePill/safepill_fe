@@ -120,7 +120,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     });
 
     try {
-      await _medicationApi.addToMyPills(selectedItem);
+      await _medicationApi.addToMyPills(selectedItem, supplyDays: days);
       await _createSchedulesIfSelected(selectedItem);
       if (mounted) {
         ScaffoldMessenger.of(
@@ -279,7 +279,18 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                   style: TextStyle(color: Colors.grey[600], fontSize: 13),
                 )
               else
-                ..._visibleSearchResults.map(_buildSearchResultTile),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 312),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: _visibleSearchResults.length > 4
+                        ? const AlwaysScrollableScrollPhysics()
+                        : const NeverScrollableScrollPhysics(),
+                    itemCount: _visibleSearchResults.length,
+                    itemBuilder: (context, index) =>
+                        _buildSearchResultTile(_visibleSearchResults[index]),
+                  ),
+                ),
             ],
             const SizedBox(height: 30),
 

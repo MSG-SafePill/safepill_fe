@@ -68,6 +68,7 @@ class CabinetItem {
   final int regId;
   final SearchItemType type;
   final int itemId;
+  final int? supplyDays;
   final String itemName;
   final String? manufacturer;
   final String? imageUrl;
@@ -79,6 +80,7 @@ class CabinetItem {
     required this.regId,
     required this.type,
     required this.itemId,
+    this.supplyDays,
     required this.itemName,
     this.manufacturer,
     this.imageUrl,
@@ -92,6 +94,7 @@ class CabinetItem {
       regId: (json['regId'] as num).toInt(),
       type: _parseItemType(json['type'] as String?),
       itemId: (json['itemId'] as num).toInt(),
+      supplyDays: (json['supplyDays'] as num?)?.toInt(),
       itemName: json['itemName'] as String? ?? '이름 없음',
       manufacturer: json['manufacturer'] as String?,
       imageUrl: json['imageUrl'] as String?,
@@ -171,11 +174,18 @@ class MedicationApi {
     );
   }
 
-  Future<void> addToMyPills(MedicationSearchItem item) async {
+  Future<void> addToMyPills(
+    MedicationSearchItem item, {
+    int? supplyDays,
+  }) async {
     await _apiClient.post(
       '/api/mypills',
       auth: true,
-      body: {'type': item.requestType, 'itemId': item.id},
+      body: {
+        'type': item.requestType,
+        'itemId': item.id,
+        ...supplyDays == null ? const {} : {'supplyDays': supplyDays},
+      },
     );
   }
 
