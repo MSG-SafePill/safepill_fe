@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
+import '../../services/local_profile_api.dart';
 import '../../services/schedule_api.dart';
+import '../../services/user_profile_api.dart';
 import '../camera/scan_medication.dart';
 import '../medication/my_medication.dart';
 import '../profile/profile.dart';
@@ -133,14 +135,32 @@ class HomeContent extends StatefulWidget {
 
 class _HomeContentState extends State<HomeContent> {
   final ScheduleApi _scheduleApi = ScheduleApi();
+  final UserProfileApi _userProfileApi = UserProfileApi();
+  final LocalProfileApi _localProfileApi = LocalProfileApi();
   bool _isLoading = true;
+  String _username = '사용자';
   List<IntakeSchedule> _schedules = [];
   Map<int, IntakeLog> _logsByScheduleId = {};
 
   @override
   void initState() {
     super.initState();
+    _loadUsername();
     _loadTodaySchedules();
+  }
+
+  Future<void> _loadUsername() async {
+    try {
+      final profile = await _userProfileApi.getProfile();
+      if (mounted) {
+        setState(() => _username = profile.username);
+      }
+    } catch (_) {
+      final profile = await _localProfileApi.getProfile();
+      if (mounted) {
+        setState(() => _username = profile.nickname);
+      }
+    }
   }
 
   Future<void> _loadTodaySchedules() async {
@@ -282,15 +302,15 @@ class _HomeContentState extends State<HomeContent> {
               bottomRight: Radius.circular(30),
             ),
           ),
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '안녕하세요, 홍길동님!',
-                style: TextStyle(fontSize: 16, color: Colors.white70),
+                '안녕하세요, $_username님!',
+                style: const TextStyle(fontSize: 16, color: Colors.white70),
               ),
-              SizedBox(height: 8),
-              Text(
+              const SizedBox(height: 8),
+              const Text(
                 '오늘의 안전 복약 스케줄이\n생성되었습니다.',
                 style: TextStyle(
                   fontSize: 24,
@@ -332,6 +352,7 @@ class _HomeContentState extends State<HomeContent> {
                               time: schedule.takeTime,
                               name: schedule.itemName,
                               detail: schedule.dosage,
+                              username: _username,
                               isInitiallyTaken:
                                   log?.status == IntakeStatus.taken,
                               onTakenChanged: (isTaken) =>
@@ -359,6 +380,7 @@ class HomeMedicationCard extends StatefulWidget {
   final String time;
   final String name;
   final String detail;
+  final String username;
   final bool showAiButton;
   final bool isInitiallyTaken;
   final Future<bool> Function(bool isTaken)? onTakenChanged;
@@ -370,6 +392,7 @@ class HomeMedicationCard extends StatefulWidget {
     required this.time,
     required this.name,
     required this.detail,
+    required this.username,
     this.showAiButton = false,
     this.isInitiallyTaken = false,
     this.onTakenChanged,
@@ -573,9 +596,9 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  '홍길동님의 기저질환(당뇨)과 등록된 약물 간의 상호작용 분석 결과입니다.',
-                  style: TextStyle(
+                Text(
+                  '${widget.username}님의 기저질환(당뇨)과 등록된 약물 간의 상호작용 분석 결과입니다.',
+                  style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFF7F8C8D),
                     height: 1.5,
