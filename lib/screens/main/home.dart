@@ -18,10 +18,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   // [상태 변수] 현재 선택된 탭 인덱스
   int _currentIndex = 0;
+  int _homeReloadKey = 0;
 
   // [화면 목록]
-  final List<Widget> _pages = [
-    const HomeContent(), // 0: 홈 (👇 아래에서 새롭게 디자인된 본문)
+  List<Widget> get _pages => [
+    HomeContent(key: ValueKey(_homeReloadKey)), // 0: 홈 (👇 아래에서 새롭게 디자인된 본문)
     const MyMedicationScreen(), // 1: 마이약장
     const ScanMedicationScreen(), // 2: 카메라
     const AiChatScreen(), // 3: AI 상담
@@ -101,6 +102,9 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () {
         setState(() {
           _currentIndex = index;
+          if (index == 0) {
+            _homeReloadKey++;
+          }
         });
       },
       child: Column(

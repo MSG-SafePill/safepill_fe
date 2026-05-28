@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
 import '../../services/chat_api.dart';
+import '../../services/local_profile_api.dart';
+import '../../services/user_profile_api.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -13,6 +15,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ChatApi _chatApi = ChatApi();
+  final UserProfileApi _userProfileApi = UserProfileApi();
+  final LocalProfileApi _localProfileApi = LocalProfileApi();
   int? _sessionId;
   bool _isSending = false;
 
@@ -20,13 +24,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
     {
       'isUser': false,
       'text':
-          '안녕하세요, 홍길동님! SafePill AI 상담사 필봇입니다. 어떤 도움이 필요하신가요? 약물 복용 방법이나 상극 정보가 궁금하시다면 언제든 물어봐 주세요.',
+          '안녕하세요, 사용자님! SafePill AI 상담사 필봇입니다. 어떤 도움이 필요하신가요? 약물 복용 방법이나 상극 정보가 궁금하시다면 언제든 물어봐 주세요.',
     },
   ];
 
   @override
   void initState() {
     super.initState();
+    _loadUsername();
     _ensureSession();
   }
 
@@ -68,6 +73,33 @@ class _AiChatScreenState extends State<AiChatScreen> {
         ).showSnackBar(SnackBar(content: Text('채팅 세션 연결 실패: ${e.message}')));
       }
     }
+  }
+
+  Future<void> _loadUsername() async {
+    try {
+      final profile = await _userProfileApi.getProfile();
+      _setGreetingName(profile.username);
+    } catch (_) {
+      final profile = await _localProfileApi.getProfile();
+      _setGreetingName(profile.nickname);
+    }
+  }
+
+  void _setGreetingName(String username) {
+    if (!mounted || _messages.isEmpty) {
+      return;
+    }
+    final firstMessage = _messages.first['text']?.toString() ?? '';
+    if (!firstMessage.contains('SafePill AI 상담사 필봇입니다.')) {
+      return;
+    }
+    setState(() {
+      _messages[0] = {
+        'isUser': false,
+        'text':
+            '안녕하세요, $username님! SafePill AI 상담사 필봇입니다. 어떤 도움이 필요하신가요? 약물 복용 방법이나 상극 정보가 궁금하시다면 언제든 물어봐 주세요.',
+      };
+    });
   }
 
   Future<void> _sendMessage() async {
