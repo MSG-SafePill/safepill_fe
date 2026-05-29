@@ -1,7 +1,8 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../demo/demo_state.dart';
+import '../demo/showcase_demo.dart';
 import 'login.dart';
 import 'signup.dart';
 
@@ -15,7 +16,7 @@ class LandingScreen extends StatefulWidget {
 class _LandingScreenState extends State<LandingScreen> {
   static const double designWidth = 393;
   static const double designHeight = 852;
-  static const double designRatio = designWidth / designHeight;
+  int _showcaseTapCount = 0;
 
   @override
   void initState() {
@@ -46,38 +47,38 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
+  void _openShowcaseDemo() {
+    _showcaseTapCount += 1;
+    if (_showcaseTapCount < 5) {
+      return;
+    }
+    _showcaseTapCount = 0;
+    DemoState.activate();
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ShowcaseDemoScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFEAF6FF),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxWidth = constraints.maxWidth;
-          final maxHeight = constraints.maxHeight;
-
-          double frameWidth = maxWidth;
-          double frameHeight = frameWidth / designRatio;
-
-          if (frameHeight > maxHeight) {
-            frameHeight = maxHeight;
-            frameWidth = frameHeight * designRatio;
-          }
-
-          // 웹에서 너무 커지지 않도록 모바일 화면 크기 제한
-          final limitedWidth = math.min(frameWidth, 430.0);
-          final limitedHeight = limitedWidth / designRatio;
-
-          return Center(
+      body: ClipRect(
+        child: SizedBox.expand(
+          child: FittedBox(
+            fit: BoxFit.contain,
             child: SizedBox(
-              width: limitedWidth,
-              height: limitedHeight,
+              width: designWidth,
+              height: designHeight,
               child: _LandingContent(
                 onLogin: _goToLogin,
                 onSignup: _goToSignup,
+                onShowcaseDemo: _openShowcaseDemo,
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -86,10 +87,12 @@ class _LandingScreenState extends State<LandingScreen> {
 class _LandingContent extends StatelessWidget {
   final VoidCallback onLogin;
   final VoidCallback onSignup;
+  final VoidCallback onShowcaseDemo;
 
   const _LandingContent({
     required this.onLogin,
     required this.onSignup,
+    required this.onShowcaseDemo,
   });
 
   @override
@@ -97,9 +100,18 @@ class _LandingContent extends StatelessWidget {
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset(
-            'assets/safepill_start.png',
-            fit: BoxFit.cover,
+          child: Image.asset('assets/safepill_start.png', fit: BoxFit.cover),
+        ),
+
+        Positioned(
+          left: 20,
+          top: 16,
+          width: 116,
+          height: 70,
+          child: GestureDetector(
+            onTap: onShowcaseDemo,
+            behavior: HitTestBehavior.opaque,
+            child: const SizedBox.expand(),
           ),
         ),
 
