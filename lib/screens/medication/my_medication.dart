@@ -83,89 +83,15 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA), // 본문 배경색 (연한 회색)
-        // [상단 앱바 및 탭 메뉴] - 이미지 7 디자인 적용
-        appBar: AppBar(
-          backgroundColor: Colors.white, // 앱바 배경색 (흰색)
-          elevation: 1, // 이미지 7처럼 약간의 그림자 추가
-
-          automaticallyImplyLeading: false, // 👈 ✨ [핵심 수정] 뒤로가기 버튼을 강제로 제거합니다.
-
-          title: const Text(
-            '마이약장',
-            style: TextStyle(
-              color: Colors.black, // 타이틀 색상 (검정)
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(
-                Icons.health_and_safety,
-                color: Color(0xFF2A8DE5),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AnalysisResult(),
-                  ),
-                );
-              },
-            ),
-          ],
-
-          // 이미지 7처럼 하단 탭과 여백을 주고 싶다면, 여기에 padding을 주는 것보다
-          // AppBar.bottom 보다는 body의 Column 상단에 배치하는 게 낫습니다.
-          // 일단은 AppBar.bottom으로 구현하고, 여백을 조절하겠습니다.
-          bottom: const TabBar(
-            labelColor: Color(0xFF2A8DE5), // 선택된 탭 컬러
-            unselectedLabelColor: Colors.grey, // 선택 안 된 탭 컬러
-            indicatorColor: Color(0xFF2A8DE5), // 밑줄 컬러
-            indicatorWeight: 3,
-            labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            unselectedLabelStyle: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.normal,
-            ),
-            tabs: [
-              Tab(text: '전체'),
-              Tab(text: '처방약'),
-              Tab(text: '영양제'),
-            ],
-          ),
-        ),
-
-        // [메인 본문 영역]
+        backgroundColor: const Color(0xFFF6FAFF),
         body: Column(
           children: [
-            // 이미지 7의 탭바 아래 하얀 여백 디테일을 살리기 위해 Container 추가
-            Container(height: 10, color: Colors.white),
-
-            // 1. 상단 검색창 (이미지 7 스타일)
+            _buildHeader(),
+            _buildTabBar(),
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20.0,
-                vertical: 15.0,
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: '약품명 또는 성분명 검색',
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              child: _buildSearchField(),
             ),
-
-            // 2. 탭별 약품 리스트 화면 전환 영역
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -201,9 +127,139 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
     );
   }
 
+  Widget _buildHeader() {
+    final total = _items.length;
+    final medicines = _items
+        .where((item) => item.type == SearchItemType.medicine)
+        .length;
+    final supplements = _items
+        .where((item) => item.type == SearchItemType.supplement)
+        .length;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(28, 66, 28, 28),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF43A3FF), Color(0xFF1F6FEA)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(
+              Icons.medical_services_rounded,
+              color: Colors.white,
+              size: 36,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '마이약장',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  total == 0
+                      ? '복용 중인 약을 등록해보세요'
+                      : '전체 $total개 · 처방약 $medicines개 · 영양제 $supplements개',
+                  style: const TextStyle(
+                    color: Color(0xE6FFFFFF),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: '상호작용 분석',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AnalysisResult()),
+              );
+            },
+            icon: const Icon(Icons.health_and_safety_rounded),
+            color: Colors.white,
+            iconSize: 30,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      color: Colors.white,
+      child: const TabBar(
+        labelColor: Color(0xFF2A8DE5),
+        unselectedLabelColor: Color(0xFF9AA3AE),
+        indicatorColor: Color(0xFF2A8DE5),
+        indicatorWeight: 3,
+        labelStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        unselectedLabelStyle: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
+        tabs: [
+          Tab(text: '전체'),
+          Tab(text: '처방약'),
+          Tab(text: '영양제'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return TextField(
+      controller: _searchController,
+      decoration: InputDecoration(
+        hintText: '약품명 또는 성분명 검색',
+        hintStyle: const TextStyle(color: Color(0xFF9AA3AE)),
+        prefixIcon: const Icon(Icons.search, color: Color(0xFF9AA3AE)),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFFE5ECF5)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFF2A8DE5)),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPillList(List<CabinetItem> items) {
     if (items.isEmpty) {
-      return const Center(child: Text('등록된 항목이 없습니다.'));
+      return const _EmptyMedicationList();
     }
 
     return ListView(
@@ -222,6 +278,56 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+class _EmptyMedicationList extends StatelessWidget {
+  const _EmptyMedicationList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 0, 28, 90),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                color: Color(0xFFEAF3FF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.medication_liquid_rounded,
+                color: Color(0xFF2A8DE5),
+                size: 36,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '등록된 항목이 없습니다',
+              style: TextStyle(
+                color: Color(0xFF23364A),
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '오른쪽 아래 + 버튼으로 복용 중인 약이나 영양제를 등록하세요.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF65758A),
+                fontSize: 14,
+                height: 1.45,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

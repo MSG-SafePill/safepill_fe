@@ -22,7 +22,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // [화면 목록]
   List<Widget> get _pages => [
-    HomeContent(key: ValueKey(_homeReloadKey)), // 0: 홈 (👇 아래에서 새롭게 디자인된 본문)
+    HomeContent(
+      key: ValueKey(_homeReloadKey),
+      onScan: () {
+        setState(() => _currentIndex = 2);
+      },
+    ), // 0: 홈
     const MyMedicationScreen(), // 1: 마이약장
     const ScanMedicationScreen(), // 2: 카메라
     const AiChatScreen(), // 3: AI 상담
@@ -131,7 +136,9 @@ class _HomeScreenState extends State<HomeScreen> {
 // [0번 탭: 새롭게 디자인된 홈 화면 본문]
 // ==========================================
 class HomeContent extends StatefulWidget {
-  const HomeContent({super.key});
+  final VoidCallback onScan;
+
+  const HomeContent({super.key, required this.onScan});
 
   @override
   State<HomeContent> createState() => _HomeContentState();
@@ -287,92 +294,779 @@ class _HomeContentState extends State<HomeContent> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: _loadTodaySchedules,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 102),
+          children: [
+            _buildTopBar(),
+            const SizedBox(height: 10),
+            _buildHeroCard(),
+            const SizedBox(height: 12),
+            _buildScheduleSection(),
+            const SizedBox(height: 12),
+            _buildScanActionCard(),
+            const SizedBox(height: 12),
+            _buildAnalysisSummaryCard(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Row(
       children: [
-        // 1. 상단 사용자 인사말 헤더 (디자인 변경!)
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.only(
-            top: 70,
-            left: 24,
-            right: 24,
-            bottom: 40,
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.menu_rounded),
+          color: const Color(0xFF8793A3),
+          iconSize: 30,
+          tooltip: '메뉴',
+        ),
+        const Spacer(),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.notifications_none_rounded),
+              color: const Color(0xFF8793A3),
+              iconSize: 30,
+              tooltip: '알림',
+            ),
+            Positioned(
+              right: 11,
+              top: 10,
+              child: Container(
+                width: 9,
+                height: 9,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF2A8DE5),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeroCard() {
+    return SizedBox(
+      height: 178,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF43A3FF), Color(0xFF0A58E8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          decoration: const BoxDecoration(
-            color: Color(0xFF2A8DE5),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30),
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1975F6).withValues(alpha: 0.22),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -10,
+              top: 22,
+              child: Opacity(opacity: 0.92, child: _heroIllustration()),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '안녕하세요, $_username님!',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  '오늘의 안전 복약\n스케줄이 생성되었습니다.',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 23,
+                    fontWeight: FontWeight.w800,
+                    height: 1.28,
+                  ),
+                ),
+                const Spacer(),
+                const Text(
+                  '규칙적인 복용으로 건강을 지켜보세요!',
+                  style: TextStyle(
+                    color: Color(0xDFFFFFFF),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _heroIllustration() {
+    return SizedBox(
+      width: 124,
+      height: 116,
+      child: Stack(
+        children: [
+          Positioned(
+            top: 2,
+            right: 14,
+            child: Container(
+              width: 68,
+              height: 78,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF88F0F5), Color(0xFF45B9EB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 14,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 38,
+              ),
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '안녕하세요, $_username님!',
-                style: const TextStyle(fontSize: 16, color: Colors.white70),
+          Positioned(
+            left: 20,
+            bottom: 10,
+            child: Transform.rotate(
+              angle: -0.65,
+              child: Container(
+                width: 62,
+                height: 28,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF93DAFF),
+                      Color(0xFF93DAFF),
+                      Colors.white,
+                      Colors.white,
+                    ],
+                    stops: [0, 0.5, 0.5, 1],
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                '오늘의 안전 복약 스케줄이\n생성되었습니다.',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 18,
+            child: Transform.rotate(
+              angle: 0.25,
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: const BoxDecoration(
                   color: Colors.white,
-                  height: 1.3,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.horizontal_rule,
+                  color: Color(0xFFCFD7E3),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScheduleSection() {
+    final nextSchedule = _nextSchedule();
+    final nextLog = nextSchedule == null
+        ? null
+        : _logsByScheduleId[nextSchedule.scheduleId];
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: _cardDecoration(),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.calendar_month_rounded,
+                color: Color(0xFF2A8DE5),
+              ),
+              const SizedBox(width: 7),
+              const Expanded(
+                child: Text(
+                  '오늘의 복약 스케줄',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF23364A),
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: _openScheduleOverview,
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFFEAF3FF),
+                  foregroundColor: const Color(0xFF2A8DE5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '전체 보기',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    SizedBox(width: 2),
+                    Icon(Icons.chevron_right, size: 18),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 10),
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 34),
+              child: CircularProgressIndicator(),
+            )
+          else if (_schedules.isEmpty)
+            _buildEmptyScheduleCard()
+          else ...[
+            HomeMedicationCard(
+              key: ValueKey(nextSchedule!.scheduleId),
+              time: nextSchedule.takeTime,
+              name: _shortMedicationName(nextSchedule.itemName),
+              detail: nextSchedule.dosage,
+              username: _username,
+              isInitiallyTaken: nextLog?.status == IntakeStatus.taken,
+              onTakenChanged: (isTaken) => _setTaken(nextSchedule, isTaken),
+              onEditSchedule: () => _editScheduleTime(nextSchedule),
+              onDeleteSchedule: () => _deleteSchedule(nextSchedule),
+            ),
+            const SizedBox(height: 10),
+            _buildScheduleSummaryRow(),
+          ],
+        ],
+      ),
+    );
+  }
 
-        // 2. 새로운 약품 리스트 영역
-        Expanded(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                  onRefresh: _loadTodaySchedules,
-                  child: ListView(
-                    padding: const EdgeInsets.all(24),
-                    children: [
-                      const Text(
-                        '오늘의 복약 스케줄',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C3E50),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      if (_schedules.isEmpty)
-                        const Text('오늘 예정된 복약 스케줄이 없습니다.')
-                      else
-                        ..._schedules.expand((schedule) {
-                          final log = _logsByScheduleId[schedule.scheduleId];
-                          return [
-                            HomeMedicationCard(
-                              key: ValueKey(schedule.scheduleId),
-                              time: schedule.takeTime,
-                              name: schedule.itemName,
-                              detail: schedule.dosage,
-                              username: _username,
-                              isInitiallyTaken:
-                                  log?.status == IntakeStatus.taken,
-                              onTakenChanged: (isTaken) =>
-                                  _setTaken(schedule, isTaken),
-                              onEditSchedule: () => _editScheduleTime(schedule),
-                              onDeleteSchedule: () => _deleteSchedule(schedule),
-                            ),
-                            const SizedBox(height: 12),
-                          ];
-                        }),
-                      const SizedBox(height: 80), // 하단 여백
-                    ],
-                  ),
-                ),
+  Widget _buildScheduleSummaryRow() {
+    final total = _schedules.length;
+    final remaining = _remainingCount();
+    final completed = total - remaining;
+
+    return Row(
+      children: [
+        _SummaryChip(
+          icon: Icons.event_available_rounded,
+          label: '오늘 $total회',
+          color: const Color(0xFF2A8DE5),
+        ),
+        const SizedBox(width: 8),
+        _SummaryChip(
+          icon: Icons.check_circle_outline_rounded,
+          label: '완료 $completed회',
+          color: const Color(0xFF18B58F),
+        ),
+        const SizedBox(width: 8),
+        _SummaryChip(
+          icon: Icons.access_time_rounded,
+          label: '남은 $remaining회',
+          color: const Color(0xFFE8A13F),
         ),
       ],
+    );
+  }
+
+  IntakeSchedule? _nextSchedule() {
+    if (_schedules.isEmpty) return null;
+
+    for (final schedule in _schedules) {
+      final log = _logsByScheduleId[schedule.scheduleId];
+      if (log?.status != IntakeStatus.taken) {
+        return schedule;
+      }
+    }
+    return _schedules.first;
+  }
+
+  String _shortMedicationName(String name) {
+    var result = name.trim();
+    result = result.replaceAll(RegExp(r'\(.+?\)'), '');
+    result = result.replaceAll('밀리그램', 'mg');
+    result = result.replaceAll('마이크로그램', 'mcg');
+    result = result.replaceAll('캡슐제', '캡슐');
+    result = result.replaceAll(RegExp(r'\s+'), ' ');
+    return result;
+  }
+
+  Widget _buildEmptyScheduleCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6FAFF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0EAF6)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEAF3FF),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.medication_liquid_rounded,
+              color: Color(0xFF2A8DE5),
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            '등록된 복약 스케줄이 없습니다',
+            style: TextStyle(
+              color: Color(0xFF23364A),
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '약을 등록하면 맞춤형 복약 스케줄이 표시됩니다.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Color(0xFF65758A), fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 42,
+            child: ElevatedButton.icon(
+              onPressed: widget.onScan,
+              icon: const Icon(Icons.camera_alt_rounded, size: 18),
+              label: const Text('약 등록하러 가기'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2A8DE5),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                textStyle: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _remainingCount() {
+    if (_schedules.isEmpty) return 0;
+    return _schedules.where((schedule) {
+      final log = _logsByScheduleId[schedule.scheduleId];
+      return log?.status != IntakeStatus.taken;
+    }).length;
+  }
+
+  Widget _buildScanActionCard() {
+    return InkWell(
+      onTap: widget.onScan,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF3FF),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFFD4E7FF)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF43A3FF), Color(0xFF0A58E8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(17),
+              ),
+              child: const Icon(
+                Icons.camera_alt_rounded,
+                color: Colors.white,
+                size: 31,
+              ),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '약 촬영하기',
+                    style: TextStyle(
+                      color: Color(0xFF23364A),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  SizedBox(height: 5),
+                  Text(
+                    '약 정보를 인식하고 복용 관리를 도와드려요.',
+                    style: TextStyle(color: Color(0xFF65758A), fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                color: Color(0xFF2A8DE5),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnalysisSummaryCard() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: _cardDecoration(),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE2FAF3),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.verified_user_rounded,
+                  color: Color(0xFF23C7B5),
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '상호작용 분석 요약',
+                      style: TextStyle(
+                        color: Color(0xFF23364A),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 7),
+                    Row(
+                      children: [
+                        _SafeBadge(),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '현재 복용 중인 약 조합은 안전합니다.',
+                            style: TextStyle(
+                              color: Color(0xFF23364A),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 7),
+                    Text(
+                      '마지막 분석: 오늘 07:30',
+                      style: TextStyle(color: Color(0xFF8793A3), fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F7FF),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF2A8DE5)),
+                SizedBox(width: 8),
+                Text(
+                  '건강 팁',
+                  style: TextStyle(
+                    color: Color(0xFF2A8DE5),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Spacer(),
+                Flexible(
+                  flex: 4,
+                  child: Text(
+                    '규칙적인 복용이 건강의 시작입니다!',
+                    textAlign: TextAlign.right,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Color(0xFF65758A)),
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: Color(0xFF2A8DE5)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: const Color(0xFFE7EEF7)),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF315F97).withValues(alpha: 0.08),
+          blurRadius: 22,
+          offset: const Offset(0, 10),
+        ),
+      ],
+    );
+  }
+
+  void _openScheduleOverview() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _ScheduleOverviewScreen(
+          username: _username,
+          schedules: _schedules,
+          logsByScheduleId: _logsByScheduleId,
+          onTakenChanged: _setTaken,
+          onEditSchedule: _editScheduleTime,
+          onDeleteSchedule: _deleteSchedule,
+        ),
+      ),
+    );
+  }
+}
+
+class _SafeBadge extends StatelessWidget {
+  const _SafeBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFDDF8EF),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Text(
+        '안전',
+        style: TextStyle(color: Color(0xFF12A87E), fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+}
+
+class _SummaryChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _SummaryChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduleOverviewScreen extends StatelessWidget {
+  final String username;
+  final List<IntakeSchedule> schedules;
+  final Map<int, IntakeLog> logsByScheduleId;
+  final Future<bool> Function(IntakeSchedule schedule, bool isTaken)
+  onTakenChanged;
+  final Future<void> Function(IntakeSchedule schedule) onEditSchedule;
+  final Future<void> Function(IntakeSchedule schedule) onDeleteSchedule;
+
+  const _ScheduleOverviewScreen({
+    required this.username,
+    required this.schedules,
+    required this.logsByScheduleId,
+    required this.onTakenChanged,
+    required this.onEditSchedule,
+    required this.onDeleteSchedule,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = schedules.map((schedule) {
+      final log = logsByScheduleId[schedule.scheduleId];
+      return HomeMedicationCard(
+        key: ValueKey(schedule.scheduleId),
+        time: schedule.takeTime,
+        name: schedule.itemName,
+        detail: schedule.dosage,
+        username: username,
+        isInitiallyTaken: log?.status == IntakeStatus.taken,
+        onTakenChanged: (isTaken) => onTakenChanged(schedule, isTaken),
+        onEditSchedule: () => onEditSchedule(schedule),
+        onDeleteSchedule: () => onDeleteSchedule(schedule),
+      );
+    }).toList();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6FAFF),
+      appBar: AppBar(
+        title: const Text('전체 복약 스케줄'),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF23364A),
+        elevation: 0,
+      ),
+      body: schedules.isEmpty
+          ? const _EmptyScheduleOverview()
+          : ListView.separated(
+              padding: const EdgeInsets.all(20),
+              itemBuilder: (context, index) => items[index],
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              itemCount: items.length,
+            ),
+    );
+  }
+}
+
+class _EmptyScheduleOverview extends StatelessWidget {
+  const _EmptyScheduleOverview();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 68,
+              height: 68,
+              decoration: const BoxDecoration(
+                color: Color(0xFFEAF3FF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.event_note_rounded,
+                color: Color(0xFF2A8DE5),
+                size: 34,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '아직 생성된 스케줄이 없습니다',
+              style: TextStyle(
+                color: Color(0xFF23364A),
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '약을 등록하면 사용자의 복약 정보에 맞춰 오늘의 스케줄이 표시됩니다.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF65758A),
+                fontSize: 14,
+                height: 1.45,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -390,6 +1084,7 @@ class HomeMedicationCard extends StatefulWidget {
   final Future<bool> Function(bool isTaken)? onTakenChanged;
   final VoidCallback? onEditSchedule;
   final VoidCallback? onDeleteSchedule;
+  final Color iconColor;
 
   const HomeMedicationCard({
     super.key,
@@ -402,6 +1097,7 @@ class HomeMedicationCard extends StatefulWidget {
     this.onTakenChanged,
     this.onEditSchedule,
     this.onDeleteSchedule,
+    this.iconColor = const Color(0xFF2A8DE5),
   });
 
   @override
@@ -428,146 +1124,241 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
 
   @override
   Widget build(BuildContext context) {
+    final period = _periodLabel(widget.time);
+    final canEdit =
+        widget.onEditSchedule != null || widget.onDeleteSchedule != null;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: const Color(0xFFE5ECF5)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 60,
-            child: Text(
-              widget.time,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2A8DE5),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Container(
+              width: 72,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: const BoxDecoration(color: Color(0xFFEAF3FF)),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    widget.time,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF2A72EA),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.detail,
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                ),
-
-                // 💡 AI 버튼이 true일 때만 보여주기
-                if (widget.showAiButton) ...[
-                  const SizedBox(height: 12),
-                  InkWell(
-                    onTap: () => _showAiDialog(context), // 팝업 띄우기!
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEBF5FB),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFD6EAF8)),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('💡 ', style: TextStyle(fontSize: 12)),
-                          Text(
-                            'AI 재배치 이유 보기',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2A8DE5),
-                            ),
-                          ),
-                        ],
-                      ),
+                  const SizedBox(height: 3),
+                  Text(
+                    period,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2A72EA),
                     ),
                   ),
                 ],
-              ],
+              ),
             ),
-          ),
-
-          // 체크박스 동작 부분
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.grey),
-            onSelected: (value) {
-              if (value == 'edit') {
-                widget.onEditSchedule?.call();
-              }
-              if (value == 'delete') {
-                widget.onDeleteSchedule?.call();
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'edit', child: Text('시간 수정')),
-              PopupMenuItem(value: 'delete', child: Text('스케줄 삭제')),
-            ],
-          ),
-          GestureDetector(
-            onTap: _isSaving
-                ? null
-                : () async {
-                    final next = !isTaken;
-                    setState(() {
-                      isTaken = next; // 클릭할 때마다 상태 토글
-                      _isSaving = true;
-                    });
-                    final saved =
-                        await widget.onTakenChanged?.call(next) ?? true;
-                    if (mounted) {
-                      setState(() {
-                        if (!saved) {
-                          isTaken = !next;
-                        }
-                        _isSaving = false;
-                      });
-                    }
-                  },
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isTaken ? const Color(0xFF2ECC71) : Colors.transparent,
-                border: Border.all(
-                  color: isTaken
-                      ? const Color(0xFF2ECC71)
-                      : Colors.grey.shade300,
-                  width: 2,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: widget.iconColor.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                          child: Icon(
+                            Icons.medical_services_rounded,
+                            color: widget.iconColor,
+                            size: 25,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            widget.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF23364A),
+                            ),
+                          ),
+                        ),
+                        if (canEdit)
+                          SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: PopupMenuButton<String>(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(
+                                Icons.more_vert_rounded,
+                                color: Color(0xFF9AA8B8),
+                              ),
+                              onSelected: (value) {
+                                if (value == 'edit') {
+                                  widget.onEditSchedule?.call();
+                                }
+                                if (value == 'delete') {
+                                  widget.onDeleteSchedule?.call();
+                                }
+                              },
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text('시간 수정'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('스케줄 삭제'),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Color(0xFFC0CAD7),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 7),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.detail,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF65758A),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: _isSaving
+                              ? null
+                              : () async {
+                                  final next = !isTaken;
+                                  setState(() {
+                                    isTaken = next;
+                                    _isSaving = true;
+                                  });
+                                  final saved =
+                                      await widget.onTakenChanged?.call(next) ??
+                                      true;
+                                  if (mounted) {
+                                    setState(() {
+                                      if (!saved) {
+                                        isTaken = !next;
+                                      }
+                                      _isSaving = false;
+                                    });
+                                  }
+                                },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isTaken
+                                  ? const Color(0xFFE3F8F2)
+                                  : const Color(0xFFF1F5FA),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isTaken
+                                      ? Icons.check_circle_outline_rounded
+                                      : Icons.radio_button_unchecked_rounded,
+                                  color: isTaken
+                                      ? const Color(0xFF18B58F)
+                                      : const Color(0xFF9AA8B8),
+                                  size: 17,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isTaken ? '완료' : '전',
+                                  style: TextStyle(
+                                    color: isTaken
+                                        ? const Color(0xFF18B58F)
+                                        : const Color(0xFF7D8899),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (widget.showAiButton) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: InkWell(
+                          onTap: () => _showAiDialog(context),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEBF5FB),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFFD6EAF8),
+                              ),
+                            ),
+                            child: const Text(
+                              'AI 재배치 이유 보기',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2A8DE5),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              child: isTaken
-                  ? const Icon(Icons.check, color: Colors.white, size: 18)
-                  : null,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  String _periodLabel(String value) {
+    final hour = int.tryParse(value.split(':').first);
+    if (hour == null) return '';
+    return hour < 12 ? '오전' : '오후';
   }
 
   // --- 중앙 팝업 (Dialog) 띄우는 함수 ---
