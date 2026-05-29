@@ -253,6 +253,69 @@ class _PillCardState extends State<PillCard> {
   // [상태 변수] 삭제 메뉴 활성화 여부
   bool _showDeleteMenu = false;
 
+  void _showInstructionDetail() {
+    setState(() => _showDeleteMenu = false);
+
+    final detail = widget.instruction.trim();
+    if (detail.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '효능 및 정보',
+                  style: TextStyle(
+                    color: Color(0xFF2A8DE5),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  detail,
+                  style: const TextStyle(
+                    color: Color(0xFF333333),
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -316,8 +379,8 @@ class _PillCardState extends State<PillCard> {
                   ),
               ],
             ),
-            subtitle: RichText(
-              text: TextSpan(
+            subtitle: Text.rich(
+              TextSpan(
                 style: const TextStyle(color: Colors.grey, fontSize: 12),
                 children: [
                   const TextSpan(text: '남은 약: '),
@@ -330,15 +393,18 @@ class _PillCardState extends State<PillCard> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  TextSpan(
-                    text: '  •  ${widget.instruction}',
-                    style: const TextStyle(
-                      color: Color(0xFF2A8DE5),
-                      fontWeight: FontWeight.bold,
+                  if (widget.instruction.trim().isNotEmpty)
+                    TextSpan(
+                      text: '  •  ${widget.instruction.trim()}',
+                      style: const TextStyle(
+                        color: Color(0xFF2A8DE5),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
                 ],
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             // 우측 점 3개 버튼 (삭제 메뉴 토글)
             trailing: IconButton(
@@ -362,6 +428,25 @@ class _PillCardState extends State<PillCard> {
                 ),
                 Row(
                   children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: widget.instruction.trim().isEmpty
+                            ? null
+                            : _showInstructionDetail,
+                        child: const Text(
+                          '자세히 보기',
+                          style: TextStyle(
+                            color: Color(0xFF2A8DE5),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 20,
+                      color: const Color(0xFFEEEEEE),
+                    ),
                     Expanded(
                       child: TextButton(
                         onPressed: () {
