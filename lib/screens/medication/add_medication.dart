@@ -185,6 +185,9 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   }
 
   String? _timeLabelToTakeTime(String label) {
+    if (label.contains('시간 상관없이')) {
+      return 'ANYTIME';
+    }
     if (label.contains('아침')) {
       return '08:00';
     }

@@ -179,6 +179,7 @@ class _HomeContentState extends State<HomeContent> {
     try {
       final schedules = await _scheduleApi.getTodaySchedules();
       final logs = await _scheduleApi.getLogsByDate(DateTime.now());
+      schedules.sort(_compareSchedules);
       if (mounted) {
         setState(() {
           _schedules = schedules;
@@ -279,7 +280,7 @@ class _HomeContentState extends State<HomeContent> {
           );
           if (index >= 0) {
             _schedules[index] = updated;
-            _schedules.sort((a, b) => a.takeTime.compareTo(b.takeTime));
+            _schedules.sort(_compareSchedules);
           }
         });
       }
@@ -1125,6 +1126,8 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
   @override
   Widget build(BuildContext context) {
     final period = _periodLabel(widget.time);
+    final displayTime = _displayTime(widget.time);
+    final isAnytime = _isAnytimeSlot(widget.time);
     final canEdit =
         widget.onEditSchedule != null || widget.onDeleteSchedule != null;
 
@@ -1146,11 +1149,12 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    widget.time,
-                    style: const TextStyle(
-                      fontSize: 20,
+                    displayTime,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: isAnytime ? 13 : 20,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF2A72EA),
+                      color: const Color(0xFF2A72EA),
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -1356,9 +1360,14 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
   }
 
   String _periodLabel(String value) {
+    if (_isAnytimeSlot(value)) return '수시';
     final hour = int.tryParse(value.split(':').first);
     if (hour == null) return '';
     return hour < 12 ? '오전' : '오후';
+  }
+
+  String _displayTime(String value) {
+    return _isAnytimeSlot(value) ? '상관없음' : value;
   }
 
   // --- 중앙 팝업 (Dialog) 띄우는 함수 ---
@@ -1494,6 +1503,9 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
 }
 
 TimeOfDay? _parseTimeOfDay(String value) {
+  if (_isAnytimeSlot(value)) {
+    return null;
+  }
   final parts = value.split(':');
   if (parts.length < 2) {
     return null;
@@ -1504,4 +1516,34 @@ TimeOfDay? _parseTimeOfDay(String value) {
     return null;
   }
   return TimeOfDay(hour: hour, minute: minute);
+}
+
+int _compareSchedules(IntakeSchedule a, IntakeSchedule b) {
+  final aKey = _scheduleSortKey(a.takeTime);
+  final bKey = _scheduleSortKey(b.takeTime);
+  if (aKey != bKey) {
+    return aKey.compareTo(bKey);
+  }
+  return a.itemName.compareTo(b.itemName);
+}
+
+int _scheduleSortKey(String value) {
+  if (_isAnytimeSlot(value)) {
+    return -1;
+  }
+  final parts = value.split(':');
+  if (parts.length < 2) {
+    return 24 * 60;
+  }
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null) {
+    return 24 * 60;
+  }
+  return hour * 60 + minute;
+}
+
+bool _isAnytimeSlot(String value) {
+  final normalized = value.trim().toUpperCase();
+  return normalized == 'ANYTIME' || normalized == '상관없음';
 }
