@@ -1,6 +1,13 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../services/api_client.dart';
+import '../../services/google_auth_api.dart';
+import '../../services/google_sign_in_button_stub.dart'
+    if (dart.library.js_interop) '../../services/google_sign_in_button_web.dart';
 import '../../services/local_profile_api.dart';
 import '../main/home.dart';
 import 'signup.dart';
@@ -16,11 +23,14 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _loginIdController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final ApiClient _apiClient = ApiClient();
+  final GoogleAuthApi _googleAuthApi = GoogleAuthApi();
   final LocalProfileApi _localProfileApi = LocalProfileApi();
+  StreamSubscription<GoogleSignInAuthenticationEvent>? _googleAuthSub;
 
   bool _obscurePassword = true;
   bool _saveId = true;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
 
   static const Color primaryBlue = Color(0xFF1F6FEA);
   static const Color deepBlue = Color(0xFF0030C8);
@@ -30,7 +40,14 @@ class _LoginScreenState extends State<LoginScreen> {
   static const Color fieldBorder = Color(0xFFDDE6F2);
 
   @override
+  void initState() {
+    super.initState();
+    _setupGoogleWebLogin();
+  }
+
+  @override
   void dispose() {
+    _googleAuthSub?.cancel();
     _loginIdController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -84,6 +101,90 @@ class _LoginScreenState extends State<LoginScreen> {
       context,
       MaterialPageRoute(builder: (context) => const SignupScreen()),
     );
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    try {
+      setState(() => _isGoogleLoading = true);
+      final email = await _googleAuthApi.login();
+      await _localProfileApi.saveLoginId(email);
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    } on GoogleSignInException catch (e) {
+      if (mounted) {
+        _showMessage(e.code == GoogleSignInExceptionCode.canceled
+            ? 'Google 로그인이 취소되었습니다.'
+            : 'Google 로그인 실패: ${e.description ?? e.code.name}');
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        _showMessage('Google 로그인 실패: ${e.message}');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showMessage('Google 로그인 중 오류가 발생했습니다: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleLoading = false);
+      }
+    }
+  }
+
+  Future<void> _setupGoogleWebLogin() async {
+    if (!kIsWeb) {
+      return;
+    }
+    try {
+      await _googleAuthApi.initialize();
+      _googleAuthSub = _googleAuthApi.authenticationEvents.listen((event) {
+        if (event is GoogleSignInAuthenticationEventSignIn) {
+          _handleGoogleAccount(event.user);
+        }
+      }, onError: (Object e) {
+        if (mounted) {
+          _showMessage('Google 로그인 실패: $e');
+        }
+      });
+    } on ApiException catch (e) {
+      if (mounted) {
+        _showMessage('Google 로그인 설정 오류: ${e.message}');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showMessage('Google 로그인 초기화 실패: $e');
+      }
+    }
+  }
+
+  Future<void> _handleGoogleAccount(GoogleSignInAccount account) async {
+    try {
+      setState(() => _isGoogleLoading = true);
+      final email = await _googleAuthApi.loginWithAccount(account);
+      await _localProfileApi.saveLoginId(email);
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    } on ApiException catch (e) {
+      if (mounted) {
+        _showMessage('Google 로그인 실패: ${e.message}');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showMessage('Google 로그인 중 오류가 발생했습니다: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleLoading = false);
+      }
+    }
   }
 
   void _showMessage(String message) {
@@ -454,14 +555,25 @@ class _LoginScreenState extends State<LoginScreen> {
           },
         ),
         const SizedBox(height: 8),
-        _socialButton(
-          label: 'Google로 로그인',
-          icon: _googleMark(),
-          backgroundColor: Colors.white,
-          onTap: () {
-            _showMessage('Google 로그인은 준비 중입니다.');
-          },
-        ),
+        if (kIsWeb)
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: Center(child: buildGoogleSignInWebButton()),
+          )
+        else
+          _socialButton(
+            label: 'Google로 로그인',
+            icon: _isGoogleLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : _googleMark(),
+            backgroundColor: Colors.white,
+            onTap: _isGoogleLoading ? null : _handleGoogleLogin,
+          ),
       ],
     );
   }
@@ -530,7 +642,7 @@ class _LoginScreenState extends State<LoginScreen> {
     required String label,
     required Widget icon,
     required Color backgroundColor,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
   }) {
     return SizedBox(
       width: double.infinity,
