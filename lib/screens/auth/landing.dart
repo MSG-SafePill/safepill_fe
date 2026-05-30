@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../demo/demo_state.dart';
-import '../demo/showcase_demo.dart';
 import 'login.dart';
 import 'signup.dart';
 
@@ -16,7 +14,6 @@ class LandingScreen extends StatefulWidget {
 class _LandingScreenState extends State<LandingScreen> {
   static const double designWidth = 393;
   static const double designHeight = 852;
-  int _showcaseTapCount = 0;
 
   @override
   void initState() {
@@ -47,19 +44,6 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  void _openShowcaseDemo() {
-    _showcaseTapCount += 1;
-    if (_showcaseTapCount < 5) {
-      return;
-    }
-    _showcaseTapCount = 0;
-    DemoState.activate();
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ShowcaseDemoScreen()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,7 +58,6 @@ class _LandingScreenState extends State<LandingScreen> {
               child: _LandingContent(
                 onLogin: _goToLogin,
                 onSignup: _goToSignup,
-                onShowcaseDemo: _openShowcaseDemo,
               ),
             ),
           ),
@@ -87,13 +70,8 @@ class _LandingScreenState extends State<LandingScreen> {
 class _LandingContent extends StatelessWidget {
   final VoidCallback onLogin;
   final VoidCallback onSignup;
-  final VoidCallback onShowcaseDemo;
 
-  const _LandingContent({
-    required this.onLogin,
-    required this.onSignup,
-    required this.onShowcaseDemo,
-  });
+  const _LandingContent({required this.onLogin, required this.onSignup});
 
   @override
   Widget build(BuildContext context) {
@@ -101,18 +79,6 @@ class _LandingContent extends StatelessWidget {
       children: [
         Positioned.fill(
           child: Image.asset('assets/safepill_start.png', fit: BoxFit.cover),
-        ),
-
-        Positioned(
-          left: 20,
-          top: 16,
-          width: 116,
-          height: 70,
-          child: GestureDetector(
-            onTap: onShowcaseDemo,
-            behavior: HitTestBehavior.opaque,
-            child: const SizedBox.expand(),
-          ),
         ),
 
         // 로그인 버튼 투명 클릭 영역

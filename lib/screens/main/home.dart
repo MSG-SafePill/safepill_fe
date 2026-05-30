@@ -7,6 +7,7 @@ import '../camera/scan_medication.dart';
 import '../medication/my_medication.dart';
 import '../profile/profile.dart';
 import '../chat/ai_chat.dart';
+import '../schedule/today_schedule_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -319,12 +320,32 @@ class _HomeContentState extends State<HomeContent> {
   Widget _buildTopBar() {
     return Row(
       children: [
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.menu_rounded),
-          color: const Color(0xFF8793A3),
-          iconSize: 30,
-          tooltip: '메뉴',
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE7EEF7)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.medication_liquid_rounded,
+                color: Color(0xFF2A8DE5),
+                size: 20,
+              ),
+              SizedBox(width: 6),
+              Text(
+                'SafePill',
+                style: TextStyle(
+                  color: Color(0xFF23364A),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
         ),
         const Spacer(),
         Stack(
@@ -503,10 +524,7 @@ class _HomeContentState extends State<HomeContent> {
   }
 
   Widget _buildScheduleSection() {
-    final nextSchedule = _nextSchedule();
-    final nextLog = nextSchedule == null
-        ? null
-        : _logsByScheduleId[nextSchedule.scheduleId];
+    final previewSchedules = _previewSchedules();
 
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
@@ -566,20 +584,153 @@ class _HomeContentState extends State<HomeContent> {
           else if (_schedules.isEmpty)
             _buildEmptyScheduleCard()
           else ...[
-            HomeMedicationCard(
-              key: ValueKey(nextSchedule!.scheduleId),
-              time: nextSchedule.takeTime,
-              name: _shortMedicationName(nextSchedule.itemName),
-              detail: nextSchedule.dosage,
-              username: _username,
-              isInitiallyTaken: nextLog?.status == IntakeStatus.taken,
-              onTakenChanged: (isTaken) => _setTaken(nextSchedule, isTaken),
-              onEditSchedule: () => _editScheduleTime(nextSchedule),
-              onDeleteSchedule: () => _deleteSchedule(nextSchedule),
-            ),
-            const SizedBox(height: 10),
             _buildScheduleSummaryRow(),
+            const SizedBox(height: 12),
+            ...previewSchedules.map(
+              (schedule) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _buildSchedulePreviewItem(schedule),
+              ),
+            ),
+            if (_schedules.length > previewSchedules.length)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  '외 ${_schedules.length - previewSchedules.length}개 일정은 전체 보기에서 확인할 수 있어요.',
+                  style: const TextStyle(
+                    color: Color(0xFF7D8899),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
           ],
+        ],
+      ),
+    );
+  }
+
+  List<IntakeSchedule> _previewSchedules() {
+    final sorted = [..._schedules]
+      ..sort((a, b) => a.takeTime.compareTo(b.takeTime));
+    final pending = sorted
+        .where(
+          (schedule) =>
+              _logsByScheduleId[schedule.scheduleId]?.status !=
+              IntakeStatus.taken,
+        )
+        .toList();
+    final source = pending.isEmpty ? sorted : pending;
+    return source.take(3).toList();
+  }
+
+  Widget _buildSchedulePreviewItem(IntakeSchedule schedule) {
+    final log = _logsByScheduleId[schedule.scheduleId];
+    final isTaken = log?.status == IntakeStatus.taken;
+
+    return InkWell(
+      onTap: _openScheduleOverview,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 68),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FBFF),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE5ECF5)),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 58,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _formatScheduleTime(schedule.takeTime),
+                    style: const TextStyle(
+                      color: Color(0xFF2A72EA),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _periodLabel(schedule.takeTime),
+                    style: const TextStyle(
+                      color: Color(0xFF2A72EA),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _shortMedicationName(schedule.itemName),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF23364A),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    schedule.dosage.isEmpty ? '복용 정보 확인 필요' : schedule.dosage,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF7D8899),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            _buildScheduleStatusPill(
+              isTaken ? '완료' : '예정',
+              isTaken
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              isTaken ? const Color(0xFF18B58F) : const Color(0xFF9AA8B8),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScheduleStatusPill(String label, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 15),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ],
       ),
     );
@@ -613,18 +764,6 @@ class _HomeContentState extends State<HomeContent> {
     );
   }
 
-  IntakeSchedule? _nextSchedule() {
-    if (_schedules.isEmpty) return null;
-
-    for (final schedule in _schedules) {
-      final log = _logsByScheduleId[schedule.scheduleId];
-      if (log?.status != IntakeStatus.taken) {
-        return schedule;
-      }
-    }
-    return _schedules.first;
-  }
-
   String _shortMedicationName(String name) {
     var result = name.trim();
     result = result.replaceAll(RegExp(r'\(.+?\)'), '');
@@ -633,6 +772,19 @@ class _HomeContentState extends State<HomeContent> {
     result = result.replaceAll('캡슐제', '캡슐');
     result = result.replaceAll(RegExp(r'\s+'), ' ');
     return result;
+  }
+
+  String _formatScheduleTime(String value) {
+    final parts = value.split(':');
+    if (parts.length >= 2) {
+      return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
+    }
+    return value.isEmpty ? '--:--' : value;
+  }
+
+  String _periodLabel(String time) {
+    final hour = int.tryParse(time.split(':').first) ?? 0;
+    return hour < 12 ? '오전' : '오후';
   }
 
   Widget _buildEmptyScheduleCard() {
@@ -708,57 +860,57 @@ class _HomeContentState extends State<HomeContent> {
   Widget _buildScanActionCard() {
     return InkWell(
       onTap: widget.onScan,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: const Color(0xFFEAF3FF),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: const Color(0xFFD4E7FF)),
         ),
         child: Row(
           children: [
             Container(
-              width: 58,
-              height: 58,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFF43A3FF), Color(0xFF0A58E8)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(17),
+                borderRadius: BorderRadius.circular(15),
               ),
               child: const Icon(
                 Icons.camera_alt_rounded,
                 color: Colors.white,
-                size: 31,
+                size: 24,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '약 촬영하기',
+                    '카메라로 약 등록',
                     style: TextStyle(
                       color: Color(0xFF23364A),
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  SizedBox(height: 5),
+                  SizedBox(height: 3),
                   Text(
-                    '약 정보를 인식하고 복용 관리를 도와드려요.',
-                    style: TextStyle(color: Color(0xFF65758A), fontSize: 14),
+                    '낱알 또는 처방전 이미지를 분석해요.',
+                    style: TextStyle(color: Color(0xFF65758A), fontSize: 13),
                   ),
                 ],
               ),
             ),
             Container(
-              width: 40,
-              height: 40,
+              width: 34,
+              height: 34,
               decoration: const BoxDecoration(
                 color: Color(0xFF2A8DE5),
                 shape: BoxShape.circle,
@@ -891,13 +1043,10 @@ class _HomeContentState extends State<HomeContent> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => _ScheduleOverviewScreen(
-          username: _username,
+        builder: (context) => TodayScheduleScreen(
           schedules: _schedules,
           logsByScheduleId: _logsByScheduleId,
           onTakenChanged: _setTaken,
-          onEditSchedule: _editScheduleTime,
-          onDeleteSchedule: _deleteSchedule,
         ),
       ),
     );
@@ -958,111 +1107,6 @@ class _SummaryChip extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ScheduleOverviewScreen extends StatelessWidget {
-  final String username;
-  final List<IntakeSchedule> schedules;
-  final Map<int, IntakeLog> logsByScheduleId;
-  final Future<bool> Function(IntakeSchedule schedule, bool isTaken)
-  onTakenChanged;
-  final Future<void> Function(IntakeSchedule schedule) onEditSchedule;
-  final Future<void> Function(IntakeSchedule schedule) onDeleteSchedule;
-
-  const _ScheduleOverviewScreen({
-    required this.username,
-    required this.schedules,
-    required this.logsByScheduleId,
-    required this.onTakenChanged,
-    required this.onEditSchedule,
-    required this.onDeleteSchedule,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final items = schedules.map((schedule) {
-      final log = logsByScheduleId[schedule.scheduleId];
-      return HomeMedicationCard(
-        key: ValueKey(schedule.scheduleId),
-        time: schedule.takeTime,
-        name: schedule.itemName,
-        detail: schedule.dosage,
-        username: username,
-        isInitiallyTaken: log?.status == IntakeStatus.taken,
-        onTakenChanged: (isTaken) => onTakenChanged(schedule, isTaken),
-        onEditSchedule: () => onEditSchedule(schedule),
-        onDeleteSchedule: () => onDeleteSchedule(schedule),
-      );
-    }).toList();
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6FAFF),
-      appBar: AppBar(
-        title: const Text('전체 복약 스케줄'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF23364A),
-        elevation: 0,
-      ),
-      body: schedules.isEmpty
-          ? const _EmptyScheduleOverview()
-          : ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemBuilder: (context, index) => items[index],
-              separatorBuilder: (context, index) => const SizedBox(height: 10),
-              itemCount: items.length,
-            ),
-    );
-  }
-}
-
-class _EmptyScheduleOverview extends StatelessWidget {
-  const _EmptyScheduleOverview();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 68,
-              height: 68,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEAF3FF),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.event_note_rounded,
-                color: Color(0xFF2A8DE5),
-                size: 34,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '아직 생성된 스케줄이 없습니다',
-              style: TextStyle(
-                color: Color(0xFF23364A),
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '약을 등록하면 사용자의 복약 정보에 맞춰 오늘의 스케줄이 표시됩니다.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF65758A),
-                fontSize: 14,
-                height: 1.45,
               ),
             ),
           ],
@@ -1401,7 +1445,7 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  '${widget.username}님의 기저질환(당뇨)과 등록된 약물 간의 상호작용 분석 결과입니다.',
+                  '${widget.username}님의 건강 정보와 등록된 약물 간의 상호작용 분석 결과입니다.',
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFF7F8C8D),
@@ -1420,7 +1464,7 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '⚠️ 위험도 높음 (저혈당 쇼크)',
+                        '⚠️ 상호작용 주의',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -1429,7 +1473,7 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        '홍삼이 인슐린 분비를 촉진하여 메트포르민과 병용 시 심각한 저혈당 위험이 발생할 수 있습니다.',
+                        '구체적인 위험 근거는 추후 상호작용 분석 API 응답을 연결해 표시할 예정입니다.',
                         style: TextStyle(
                           fontSize: 13,
                           color: Color(0xFFC0392B),
