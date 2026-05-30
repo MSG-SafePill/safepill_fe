@@ -19,6 +19,15 @@ class MyApp extends StatelessWidget {
           insetPadding: EdgeInsets.fromLTRB(16, 0, 16, 16),
         ),
       ),
+      builder: (context, child) {
+        return Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) {
+            ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+          },
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       // 👇 여기가 HomeScreen이 아니라 SplashScreen이어야 합니다!
       home: const SplashScreen(),
     );

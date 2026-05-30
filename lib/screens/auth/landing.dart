@@ -105,10 +105,10 @@ class _LandingContent extends StatelessWidget {
 
         // 로그인 버튼 투명 클릭 영역
         Positioned(
-          left: 32,
-          right: 32,
-          bottom: 136,
-          height: 66,
+          left: 30,
+          right: 30,
+          bottom: 114,
+          height: 62,
           child: GestureDetector(
             onTap: onLogin,
             behavior: HitTestBehavior.opaque,
@@ -118,10 +118,10 @@ class _LandingContent extends StatelessWidget {
 
         // 회원가입 버튼 투명 클릭 영역
         Positioned(
-          left: 32,
-          right: 32,
-          bottom: 48,
-          height: 66,
+          left: 30,
+          right: 30,
+          bottom: 45,
+          height: 62,
           child: GestureDetector(
             onTap: onSignup,
             behavior: HitTestBehavior.opaque,
