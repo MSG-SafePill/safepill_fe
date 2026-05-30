@@ -1,0 +1,1 @@
+enum ScanMode { pill, prescription }

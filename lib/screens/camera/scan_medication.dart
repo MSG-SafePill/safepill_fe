@@ -3,14 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../medication/add_medication.dart';
 import '../../services/api_client.dart';
-import '../../services/medication_api.dart';
-import '../../services/ocr_registration_api.dart';
 import '../../services/vision_api.dart';
 import '../../theme/app_theme.dart';
-
-enum ScanMode { pill, prescription }
+import 'scan_mode.dart';
+import 'scan_result.dart';
 
 class ScanMedicationScreen extends StatefulWidget {
   const ScanMedicationScreen({super.key});
@@ -22,18 +19,16 @@ class ScanMedicationScreen extends StatefulWidget {
 class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
   final ImagePicker _picker = ImagePicker();
   final VisionApi _visionApi = VisionApi();
-  final OcrRegistrationApi _ocrRegistrationApi = OcrRegistrationApi();
 
   ScanMode _mode = ScanMode.pill;
   bool _isLoading = false;
   XFile? _selectedImage;
   Uint8List? _selectedImageBytes;
-  List<PillIdentifyCandidate> _pillCandidates = [];
-  List<PrescriptionOcrItem> _prescriptionItems = [];
-  final Map<String, MedicationMatchCandidate> _selectedOcrCandidates = {};
-  bool _isRegistering = false;
 
-  Future<void> _pickAndAnalyze(ImageSource source) async {
+  Future<void> _pickImage(
+    ImageSource source, {
+    bool analyzeAfterPick = false,
+  }) async {
     final image = await _picker.pickImage(source: source, imageQuality: 85);
     if (image == null) {
       return;
@@ -43,41 +38,60 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
     setState(() {
       _selectedImage = image;
       _selectedImageBytes = imageBytes;
-      _isLoading = true;
-      _pillCandidates = [];
-      _prescriptionItems = [];
-      _selectedOcrCandidates.clear();
     });
+
+    if (analyzeAfterPick) {
+      await _analyzeImage(image, imageBytes);
+    }
+  }
+
+  Future<void> _analyzeSelectedImage() async {
+    final image = _selectedImage;
+    final imageBytes = _selectedImageBytes;
+    if (image == null || imageBytes == null) {
+      await _pickImage(ImageSource.camera, analyzeAfterPick: true);
+      return;
+    }
+    await _analyzeImage(image, imageBytes);
+  }
+
+  Future<void> _analyzeImage(XFile image, Uint8List imageBytes) async {
+    setState(() => _isLoading = true);
+    List<PillIdentifyCandidate> pillCandidates = [];
+    List<PrescriptionOcrItem> prescriptionItems = [];
+    String? errorMessage;
 
     try {
       if (_mode == ScanMode.pill) {
-        final candidates = await _visionApi.identifyPill(image);
-        if (mounted) {
-          setState(() => _pillCandidates = candidates);
-        }
+        pillCandidates = await _visionApi.identifyPill(image);
       } else {
-        final items = await _visionApi.scanPrescription(image);
-        if (mounted) {
-          setState(() => _prescriptionItems = items);
-        }
+        prescriptionItems = await _visionApi.scanPrescription(image);
       }
     } on ApiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('분석 실패: ${e.message}')));
-      }
+      errorMessage = e.message;
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('이미지 분석 서버와 연결할 수 없습니다.')));
-      }
+      errorMessage = '이미지 분석 서버와 연결할 수 없습니다.';
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+
+    if (!mounted) {
+      return;
+    }
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ScanResultScreen(
+          mode: _mode,
+          imageBytes: imageBytes,
+          pillCandidates: pillCandidates,
+          prescriptionItems: prescriptionItems,
+          errorMessage: errorMessage,
+        ),
+      ),
+    );
   }
 
   @override
@@ -233,9 +247,8 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
                       : (value) {
                           setState(() {
                             _mode = value.first;
-                            _pillCandidates = [];
-                            _prescriptionItems = [];
-                            _selectedOcrCandidates.clear();
+                            _selectedImage = null;
+                            _selectedImageBytes = null;
                           });
                         },
                 ),
@@ -247,12 +260,10 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
                       icon: Icons.photo_library_rounded,
                       onTap: _isLoading
                           ? null
-                          : () => _pickAndAnalyze(ImageSource.gallery),
+                          : () => _pickImage(ImageSource.gallery),
                     ),
                     GestureDetector(
-                      onTap: _isLoading
-                          ? null
-                          : () => _pickAndAnalyze(ImageSource.camera),
+                      onTap: _isLoading ? null : _analyzeSelectedImage,
                       child: Container(
                         width: 76,
                         height: 76,
@@ -266,6 +277,15 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
                             color: Colors.white,
                             shape: BoxShape.circle,
                           ),
+                          child: _isLoading
+                              ? const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : null,
                         ),
                       ),
                     ),
@@ -277,237 +297,27 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
                 ),
                 const SizedBox(height: 18),
                 const Text(
-                  '약이 화면에 잘 보이도록 배치해주세요',
+                  '사진을 선택한 뒤 촬영 버튼을 눌러 분석해주세요',
                   style: TextStyle(color: Colors.white, fontSize: 13),
                 ),
               ],
             ),
           ),
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+            child: Text(
+              _selectedImage == null
+                  ? (_mode == ScanMode.pill
+                        ? '낱알을 촬영하거나 갤러리에서 선택해주세요.'
+                        : '처방전이나 약 봉투를 촬영하거나 선택해주세요.')
+                  : '선택한 사진을 분석할 준비가 되었습니다.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70),
             ),
-          if (!_isLoading && _mode == ScanMode.pill) ..._buildPillResults(),
-          if (!_isLoading && _mode == ScanMode.prescription)
-            ..._buildPrescriptionResults(),
+          ),
         ],
       ),
     );
-  }
-
-  List<Widget> _buildPillResults() {
-    if (_selectedImage == null) {
-      return [const _ScanEmptyText('낱알을 촬영하면 약 후보가 표시됩니다.')];
-    }
-    if (_pillCandidates.isEmpty) {
-      return [const _ScanEmptyText('식별된 후보가 없습니다.')];
-    }
-    return [
-      const _ResultTitle('식별 후보'),
-      const SizedBox(height: 12),
-      ..._pillCandidates.map(
-        (item) => _ResultCard(
-          icon: Icons.medication_rounded,
-          title: item.pillName,
-          subtitle: [
-            '신뢰도 ${(item.confidence * 100).toStringAsFixed(1)}%',
-            item.manufacturer,
-          ].whereType<String>().join(' | '),
-          trailing: item.itemId == null
-              ? Icons.chevron_right_rounded
-              : Icons.add_circle_outline_rounded,
-          onTap: () {
-            if (item.itemId != null && item.itemType != null) {
-              _registerSingleCandidate(item);
-            } else {
-              _openAddMedication(item.pillName);
-            }
-          },
-        ),
-      ),
-    ];
-  }
-
-  List<Widget> _buildPrescriptionResults() {
-    if (_selectedImage == null) {
-      return [const _ScanEmptyText('처방전이나 약 봉투를 촬영하면 추출 결과가 표시됩니다.')];
-    }
-    if (_prescriptionItems.isEmpty) {
-      return [const _ScanEmptyText('추출된 약 정보가 없습니다.')];
-    }
-    return [
-      const _ResultTitle('OCR 추출 결과'),
-      const SizedBox(height: 12),
-      ..._prescriptionItems.map(
-        (item) => Container(
-          margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          decoration: AppDecorations.card(radius: 18),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(
-                    Icons.receipt_long_rounded,
-                    color: AppColors.primary,
-                  ),
-                  title: Text(item.medicineName),
-                  subtitle: Text(
-                    [
-                      item.dosage,
-                      item.frequency,
-                      item.mealTiming,
-                      item.days,
-                    ].whereType<String>().join(' | '),
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.search_rounded),
-                    onPressed: () => _openAddMedication(item.medicineName),
-                  ),
-                ),
-                if (item.matchCandidates.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedOcrCandidates[item.medicineName]
-                          ?.selectionKey,
-                      decoration: InputDecoration(
-                        labelText: '등록 후보 선택',
-                        filled: true,
-                        fillColor: AppColors.background,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      items: item.matchCandidates
-                          .map(
-                            (candidate) => DropdownMenuItem(
-                              value: candidate.selectionKey,
-                              child: Text(candidate.itemName),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (selectionKey) {
-                        setState(() {
-                          OcrMatchCandidate? candidate;
-                          for (final matchCandidate in item.matchCandidates) {
-                            if (matchCandidate.selectionKey == selectionKey) {
-                              candidate = matchCandidate;
-                              break;
-                            }
-                          }
-                          if (candidate != null) {
-                            _selectedOcrCandidates[item.medicineName] =
-                                MedicationMatchCandidate(
-                                  itemType: candidate.itemType == 'SUPPLEMENT'
-                                      ? SearchItemType.supplement
-                                      : SearchItemType.medicine,
-                                  itemId: candidate.itemId,
-                                  itemName: candidate.itemName,
-                                  manufacturer: candidate.manufacturer,
-                                  score: candidate.score,
-                                );
-                          }
-                        });
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      if (_prescriptionItems.any(
-        (item) => item.matchCandidates.isNotEmpty,
-      )) ...[
-        const SizedBox(height: 12),
-        ElevatedButton.icon(
-          onPressed: _isRegistering ? null : _registerSelectedOcrItems,
-          icon: const Icon(Icons.playlist_add_check_rounded),
-          label: Text(_isRegistering ? '등록 중...' : '선택한 OCR 결과 등록'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-        ),
-      ],
-    ];
-  }
-
-  void _openAddMedication(String keyword) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AddMedicationScreen(initialKeyword: keyword),
-      ),
-    );
-  }
-
-  Future<void> _registerSingleCandidate(PillIdentifyCandidate item) async {
-    final candidate = MedicationMatchCandidate(
-      itemType: item.itemType == 'SUPPLEMENT'
-          ? SearchItemType.supplement
-          : SearchItemType.medicine,
-      itemId: item.itemId!,
-      itemName: item.pillName,
-      manufacturer: item.manufacturer,
-      score: item.confidence,
-    );
-    await _registerSelections([
-      OcrRegistrationSelection(candidate: candidate, schedules: const []),
-    ]);
-  }
-
-  Future<void> _registerSelectedOcrItems() async {
-    final selections = <OcrRegistrationSelection>[];
-    for (final item in _prescriptionItems) {
-      final candidate = _selectedOcrCandidates[item.medicineName];
-      if (candidate != null) {
-        selections.add(
-          OcrRegistrationSelection(
-            candidate: candidate,
-            schedules: item.scheduleSuggestions,
-          ),
-        );
-      }
-    }
-    if (selections.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('등록할 후보를 선택해주세요.')));
-      return;
-    }
-    await _registerSelections(selections);
-  }
-
-  Future<void> _registerSelections(
-    List<OcrRegistrationSelection> selections,
-  ) async {
-    setState(() => _isRegistering = true);
-    try {
-      final results = await _ocrRegistrationApi.registerSelections(selections);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(duration: const Duration(seconds: 2), content: Text('${results.length}개 항목이 등록되었습니다.')),
-        );
-      }
-    } on ApiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('등록 실패: ${e.message}')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isRegistering = false);
-      }
-    }
   }
 }
 
@@ -583,75 +393,6 @@ class _RoundActionButton extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: Colors.white, size: 24),
-      ),
-    );
-  }
-}
-
-class _ResultTitle extends StatelessWidget {
-  const _ResultTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-      child: Text(
-        text,
-        style: AppTextStyles.sectionTitle.copyWith(color: Colors.white),
-      ),
-    );
-  }
-}
-
-class _ScanEmptyText extends StatelessWidget {
-  const _ScanEmptyText(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.white70),
-      ),
-    );
-  }
-}
-
-class _ResultCard extends StatelessWidget {
-  const _ResultCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.trailing,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final IconData trailing;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-      decoration: AppDecorations.card(radius: 18),
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(icon, color: AppColors.primary),
-        title: Text(
-          title,
-          style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w800),
-        ),
-        subtitle: Text(subtitle, style: AppTextStyles.caption),
-        trailing: Icon(trailing, color: AppColors.primary),
       ),
     );
   }
