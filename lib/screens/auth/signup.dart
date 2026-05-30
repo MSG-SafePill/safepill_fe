@@ -150,7 +150,7 @@ class _SignupScreenState extends State<SignupScreen> {
   void _showMessage(String message) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text(message)));
   }
 
   @override

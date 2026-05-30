@@ -58,7 +58,7 @@ class _HealthInfoScreenState extends State<HealthInfoScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('건강 정보 조회 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('건강 정보 조회 실패: ${e.message}')));
       }
     } finally {
       if (mounted) {
@@ -79,14 +79,14 @@ class _HealthInfoScreenState extends State<HealthInfoScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('건강 정보가 저장되었습니다.')));
+        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('건강 정보가 저장되었습니다.')));
         Navigator.pop(context);
       }
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('저장 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('저장 실패: ${e.message}')));
       }
     } finally {
       if (mounted) {
@@ -105,13 +105,13 @@ class _HealthInfoScreenState extends State<HealthInfoScreen> {
         });
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('건강 정보가 삭제되었습니다.')));
+        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('건강 정보가 삭제되었습니다.')));
       }
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('삭제 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('삭제 실패: ${e.message}')));
       }
     }
   }

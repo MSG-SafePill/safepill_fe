@@ -70,7 +70,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('채팅 세션 연결 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('채팅 세션 연결 실패: ${e.message}')));
       }
     }
   }

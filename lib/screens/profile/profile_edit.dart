@@ -51,7 +51,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('프로필 조회 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('프로필 조회 실패: ${e.message}')));
       }
     } finally {
       if (mounted) {
@@ -65,7 +65,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     if (nickname.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('닉네임을 입력해주세요.')));
+      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('닉네임을 입력해주세요.')));
       return;
     }
     setState(() => _isSaving = true);
@@ -77,13 +77,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       setState(() => _profile = profile);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('프로필이 저장되었습니다.')));
+      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('프로필이 저장되었습니다.')));
       Navigator.pop(context);
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('저장 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('저장 실패: ${e.message}')));
       }
     } finally {
       if (mounted) {
@@ -112,13 +112,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   newPassword.isEmpty ||
                   confirmPassword.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('비밀번호를 모두 입력해주세요.')),
+                  const SnackBar(duration: Duration(seconds: 2), content: Text('비밀번호를 모두 입력해주세요.')),
                 );
                 return;
               }
               if (newPassword != confirmPassword) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('새 비밀번호가 일치하지 않습니다.')),
+                  const SnackBar(duration: Duration(seconds: 2), content: Text('새 비밀번호가 일치하지 않습니다.')),
                 );
                 return;
               }
@@ -134,11 +134,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(
                   rootContext,
-                ).showSnackBar(const SnackBar(content: Text('비밀번호가 변경되었습니다.')));
+                ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('비밀번호가 변경되었습니다.')));
               } on ApiException catch (e) {
                 if (rootContext.mounted) {
                   ScaffoldMessenger.of(rootContext).showSnackBar(
-                    SnackBar(content: Text('비밀번호 변경 실패: ${e.message}')),
+                    SnackBar(duration: const Duration(seconds: 2), content: Text('비밀번호 변경 실패: ${e.message}')),
                   );
                 }
               } finally {

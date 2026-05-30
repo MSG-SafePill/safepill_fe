@@ -59,13 +59,13 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('분석 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('분석 실패: ${e.message}')));
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('이미지 분석 서버와 연결할 수 없습니다.')));
+        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('이미지 분석 서버와 연결할 수 없습니다.')));
       }
     } finally {
       if (mounted) {
@@ -378,7 +378,7 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
     if (selections.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('등록할 후보를 선택해주세요.')));
+      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('등록할 후보를 선택해주세요.')));
       return;
     }
     await _registerSelections(selections);
@@ -392,14 +392,14 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
       final results = await _ocrRegistrationApi.registerSelections(selections);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${results.length}개 항목이 등록되었습니다.')),
+          SnackBar(duration: const Duration(seconds: 2), content: Text('${results.length}개 항목이 등록되었습니다.')),
         );
       }
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('등록 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('등록 실패: ${e.message}')));
       }
     } finally {
       if (mounted) {

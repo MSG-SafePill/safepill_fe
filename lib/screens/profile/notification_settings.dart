@@ -82,7 +82,7 @@ class _NotificationSettingsScreenState
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('알림 설정 조회 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('알림 설정 조회 실패: ${e.message}')));
       }
     } finally {
       if (mounted) {
@@ -111,13 +111,13 @@ class _NotificationSettingsScreenState
       _applySettings(saved);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('알림 설정이 저장되었습니다.')));
+      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('알림 설정이 저장되었습니다.')));
       Navigator.pop(context);
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('알림 설정 저장 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('알림 설정 저장 실패: ${e.message}')));
       }
     } finally {
       if (mounted) {

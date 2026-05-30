@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showMessage(String message) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text(message)));
   }
 
   @override

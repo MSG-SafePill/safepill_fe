@@ -41,7 +41,7 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('약장 조회 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('약장 조회 실패: ${e.message}')));
       }
     } finally {
       if (mounted) {
@@ -57,13 +57,13 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
         setState(() => _items.removeWhere((item) => item.regId == regId));
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('내 약장에서 삭제되었습니다.')));
+        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('내 약장에서 삭제되었습니다.')));
       }
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('삭제 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('삭제 실패: ${e.message}')));
       }
     }
   }

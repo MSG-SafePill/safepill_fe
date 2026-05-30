@@ -57,7 +57,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     if (keyword.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('검색어를 입력해주세요.')));
+      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('검색어를 입력해주세요.')));
       return;
     }
 
@@ -77,13 +77,13 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('검색 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('검색 실패: ${e.message}')));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('서버와 연결할 수 없습니다.')));
+        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('서버와 연결할 수 없습니다.')));
       }
     } finally {
       if (mounted) {
@@ -99,19 +99,19 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     if (selectedItem == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('내 약장에 추가할 약품을 선택해주세요.')));
+      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('내 약장에 추가할 약품을 선택해주세요.')));
       return;
     }
     if (selectedItem.type != _selectedType) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('선택한 분류에 맞는 검색 결과를 다시 선택해주세요.')));
+      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('선택한 분류에 맞는 검색 결과를 다시 선택해주세요.')));
       return;
     }
     if (selectedItem.registered) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('이미 내 약장에 등록된 항목입니다.')));
+      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('이미 내 약장에 등록된 항목입니다.')));
       return;
     }
 
@@ -125,20 +125,20 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('내 약장에 추가되었습니다.')));
+        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('내 약장에 추가되었습니다.')));
         Navigator.pop(context);
       }
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('추가 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('추가 실패: ${e.message}')));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('서버와 연결할 수 없습니다.')));
+        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('서버와 연결할 수 없습니다.')));
       }
     } finally {
       if (mounted) {
@@ -552,7 +552,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
         if (item.registered) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('이미 등록된 항목입니다.')));
+          ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('이미 등록된 항목입니다.')));
           return;
         }
         setState(() {

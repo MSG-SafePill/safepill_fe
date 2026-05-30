@@ -190,7 +190,7 @@ class _HomeContentState extends State<HomeContent> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('오늘의 스케줄 조회 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('오늘의 스케줄 조회 실패: ${e.message}')));
       }
     } finally {
       if (mounted) {
@@ -228,7 +228,7 @@ class _HomeContentState extends State<HomeContent> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('복약 기록 저장 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('복약 기록 저장 실패: ${e.message}')));
       }
       return false;
     }
@@ -246,13 +246,13 @@ class _HomeContentState extends State<HomeContent> {
         });
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('스케줄이 삭제되었습니다.')));
+        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('스케줄이 삭제되었습니다.')));
       }
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('스케줄 삭제 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('스케줄 삭제 실패: ${e.message}')));
       }
     }
   }
@@ -288,7 +288,7 @@ class _HomeContentState extends State<HomeContent> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('스케줄 수정 실패: ${e.message}')));
+        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('스케줄 수정 실패: ${e.message}')));
       }
     }
   }
