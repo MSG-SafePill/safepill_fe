@@ -31,6 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _saveId = true;
   bool _isLoading = false;
   bool _isGoogleLoading = false;
+  bool _isGoogleWebReady = false;
 
   static const Color primaryBlue = Color(0xFF1F6FEA);
   static const Color deepBlue = Color(0xFF0030C8);
@@ -116,9 +117,11 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } on GoogleSignInException catch (e) {
       if (mounted) {
-        _showMessage(e.code == GoogleSignInExceptionCode.canceled
-            ? 'Google 로그인이 취소되었습니다.'
-            : 'Google 로그인 실패: ${e.description ?? e.code.name}');
+        _showMessage(
+          e.code == GoogleSignInExceptionCode.canceled
+              ? 'Google 로그인이 취소되었습니다.'
+              : 'Google 로그인 실패: ${e.description ?? e.code.name}',
+        );
       }
     } on ApiException catch (e) {
       if (mounted) {
@@ -141,21 +144,29 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     try {
       await _googleAuthApi.initialize();
-      _googleAuthSub = _googleAuthApi.authenticationEvents.listen((event) {
-        if (event is GoogleSignInAuthenticationEventSignIn) {
-          _handleGoogleAccount(event.user);
-        }
-      }, onError: (Object e) {
-        if (mounted) {
-          _showMessage('Google 로그인 실패: $e');
-        }
-      });
+      if (mounted) {
+        setState(() => _isGoogleWebReady = true);
+      }
+      _googleAuthSub = _googleAuthApi.authenticationEvents.listen(
+        (event) {
+          if (event is GoogleSignInAuthenticationEventSignIn) {
+            _handleGoogleAccount(event.user);
+          }
+        },
+        onError: (Object e) {
+          if (mounted) {
+            _showMessage('Google 로그인 실패: $e');
+          }
+        },
+      );
     } on ApiException catch (e) {
       if (mounted) {
+        setState(() => _isGoogleWebReady = false);
         _showMessage('Google 로그인 설정 오류: ${e.message}');
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isGoogleWebReady = false);
         _showMessage('Google 로그인 초기화 실패: $e');
       }
     }
@@ -188,9 +199,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(duration: const Duration(seconds: 2), content: Text(message)),
+    );
   }
 
   @override
@@ -555,7 +566,7 @@ class _LoginScreenState extends State<LoginScreen> {
           },
         ),
         const SizedBox(height: 8),
-        if (kIsWeb)
+        if (kIsWeb && _isGoogleWebReady)
           SizedBox(
             width: double.infinity,
             height: 48,
