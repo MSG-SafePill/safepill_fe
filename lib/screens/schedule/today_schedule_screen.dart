@@ -59,12 +59,14 @@ class TodayScheduleScreen extends StatefulWidget {
   final Map<int, IntakeLog> logsByScheduleId;
   final Future<bool> Function(IntakeSchedule schedule, bool isTaken)?
   onTakenChanged;
+  final ValueChanged<int>? onNavigateTab;
 
   const TodayScheduleScreen({
     super.key,
     this.schedules = const [],
     this.logsByScheduleId = const {},
     this.onTakenChanged,
+    this.onNavigateTab,
   });
 
   @override
@@ -225,42 +227,50 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
             icon: Icons.home,
             label: '홈',
             isActive: true,
-            onTap: () => Navigator.maybePop(context),
+            onTap: () => _navigateTab(context, 0),
           ),
           _BottomNavItem(
             icon: Icons.medication,
             label: '마이약장',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MyMedicationScreen()),
-              );
-            },
+            onTap: () => _navigateTab(context, 1),
           ),
           const SizedBox(width: 40),
           _BottomNavItem(
             icon: Icons.smart_toy,
             label: 'AI 상담',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AiChatScreen()),
-              );
-            },
+            onTap: () => _navigateTab(context, 3),
           ),
           _BottomNavItem(
             icon: Icons.person,
             label: '내정보',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-            },
+            onTap: () => _navigateTab(context, 4),
           ),
         ],
       ),
     );
+  }
+
+  void _navigateTab(BuildContext context, int index) {
+    if (widget.onNavigateTab != null) {
+      Navigator.pop(context);
+      widget.onNavigateTab!(index);
+      return;
+    }
+
+    if (index == 0) {
+      Navigator.maybePop(context);
+      return;
+    }
+
+    final route = switch (index) {
+      1 => const MyMedicationScreen(),
+      3 => const AiChatScreen(),
+      4 => const ProfileScreen(),
+      _ => null,
+    };
+    if (route == null) return;
+
+    Navigator.push(context, MaterialPageRoute(builder: (_) => route));
   }
 
   Future<void> _toggleCompleted(TodayScheduleItem item) async {

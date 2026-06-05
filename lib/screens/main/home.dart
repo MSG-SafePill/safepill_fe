@@ -28,6 +28,9 @@ class _HomeScreenState extends State<HomeScreen> {
       onScan: () {
         setState(() => _currentIndex = 2);
       },
+      onNavigateTab: (index) {
+        setState(() => _currentIndex = index);
+      },
     ), // 0: 홈
     const MyMedicationScreen(), // 1: 마이약장
     const ScanMedicationScreen(), // 2: 카메라
@@ -138,8 +141,13 @@ class _HomeScreenState extends State<HomeScreen> {
 // ==========================================
 class HomeContent extends StatefulWidget {
   final VoidCallback onScan;
+  final ValueChanged<int> onNavigateTab;
 
-  const HomeContent({super.key, required this.onScan});
+  const HomeContent({
+    super.key,
+    required this.onScan,
+    required this.onNavigateTab,
+  });
 
   @override
   State<HomeContent> createState() => _HomeContentState();
@@ -189,9 +197,12 @@ class _HomeContentState extends State<HomeContent> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('오늘의 스케줄 조회 실패: ${e.message}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 2),
+            content: Text('오늘의 스케줄 조회 실패: ${e.message}'),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -227,70 +238,14 @@ class _HomeContentState extends State<HomeContent> {
       return true;
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('복약 기록 저장 실패: ${e.message}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 2),
+            content: Text('복약 기록 저장 실패: ${e.message}'),
+          ),
+        );
       }
       return false;
-    }
-  }
-
-  Future<void> _deleteSchedule(IntakeSchedule schedule) async {
-    try {
-      await _scheduleApi.deleteSchedule(schedule.scheduleId);
-      if (mounted) {
-        setState(() {
-          _schedules.removeWhere(
-            (item) => item.scheduleId == schedule.scheduleId,
-          );
-          _logsByScheduleId.remove(schedule.scheduleId);
-        });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('스케줄이 삭제되었습니다.')));
-      }
-    } on ApiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('스케줄 삭제 실패: ${e.message}')));
-      }
-    }
-  }
-
-  Future<void> _editScheduleTime(IntakeSchedule schedule) async {
-    final current = _parseTimeOfDay(schedule.takeTime);
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: current ?? TimeOfDay.now(),
-    );
-    if (picked == null) {
-      return;
-    }
-    final takeTime =
-        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-    try {
-      final updated = await _scheduleApi.updateSchedule(
-        scheduleId: schedule.scheduleId,
-        takeTime: takeTime,
-      );
-      if (mounted) {
-        setState(() {
-          final index = _schedules.indexWhere(
-            (item) => item.scheduleId == updated.scheduleId,
-          );
-          if (index >= 0) {
-            _schedules[index] = updated;
-            _schedules.sort(_compareSchedules);
-          }
-        });
-      }
-    } on ApiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('스케줄 수정 실패: ${e.message}')));
-      }
     }
   }
 
@@ -1047,6 +1002,7 @@ class _HomeContentState extends State<HomeContent> {
           schedules: _schedules,
           logsByScheduleId: _logsByScheduleId,
           onTakenChanged: _setTaken,
+          onNavigateTab: widget.onNavigateTab,
         ),
       ),
     );
@@ -1544,22 +1500,6 @@ class _HomeMedicationCardState extends State<HomeMedicationCard> {
       },
     );
   }
-}
-
-TimeOfDay? _parseTimeOfDay(String value) {
-  if (_isAnytimeSlot(value)) {
-    return null;
-  }
-  final parts = value.split(':');
-  if (parts.length < 2) {
-    return null;
-  }
-  final hour = int.tryParse(parts[0]);
-  final minute = int.tryParse(parts[1]);
-  if (hour == null || minute == null) {
-    return null;
-  }
-  return TimeOfDay(hour: hour, minute: minute);
 }
 
 int _compareSchedules(IntakeSchedule a, IntakeSchedule b) {

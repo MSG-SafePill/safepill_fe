@@ -39,9 +39,12 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('약장 조회 실패: ${e.message}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 2),
+            content: Text('약장 조회 실패: ${e.message}'),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -55,15 +58,21 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
       await _medicationApi.deleteMyPill(regId);
       if (mounted) {
         setState(() => _items.removeWhere((item) => item.regId == regId));
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('내 약장에서 삭제되었습니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            duration: Duration(seconds: 2),
+            content: Text('내 약장에서 삭제되었습니다.'),
+          ),
+        );
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('삭제 실패: ${e.message}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 2),
+            content: Text('삭제 실패: ${e.message}'),
+          ),
+        );
       }
     }
   }
@@ -82,46 +91,55 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
     // [탭 제어기: 전체, 처방약, 영양제 3개 탭 구성]
     return DefaultTabController(
       length: 3,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF6FAFF),
-        body: Column(
+      child: Container(
+        color: const Color(0xFFF6FAFF),
+        child: Stack(
           children: [
-            _buildHeader(),
-            _buildTabBar(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: _buildSearchField(),
-            ),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : TabBarView(
-                      children: [
-                        _buildPillList(_filteredItems(null)),
-                        _buildPillList(_filteredItems(SearchItemType.medicine)),
-                        _buildPillList(
-                          _filteredItems(SearchItemType.supplement),
+            Column(
+              children: [
+                _buildHeader(),
+                _buildTabBar(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                  child: _buildSearchField(),
+                ),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : TabBarView(
+                          children: [
+                            _buildPillList(_filteredItems(null)),
+                            _buildPillList(
+                              _filteredItems(SearchItemType.medicine),
+                            ),
+                            _buildPillList(
+                              _filteredItems(SearchItemType.supplement),
+                            ),
+                          ],
                         ),
-                      ],
+                ),
+              ],
+            ),
+            Positioned(
+              right: 22,
+              bottom: 26,
+              child: FloatingActionButton(
+                heroTag: 'myMedicationAddFab',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddMedicationScreen(),
                     ),
+                  ).then((_) => _loadMyPills());
+                },
+                backgroundColor: const Color(0xFF2A8DE5),
+                shape: const CircleBorder(),
+                elevation: 4,
+                child: const Icon(Icons.add, color: Colors.white, size: 35),
+              ),
             ),
           ],
-        ),
-
-        // [우측 하단 약 추가 플로팅 버튼] 유지
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AddMedicationScreen(),
-              ),
-            ).then((_) => _loadMyPills());
-          },
-          backgroundColor: const Color(0xFF2A8DE5),
-          shape: const CircleBorder(),
-          elevation: 4,
-          child: const Icon(Icons.add, color: Colors.white, size: 35),
         ),
       ),
     );
@@ -263,7 +281,7 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
     }
 
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
       children: items
           .map(
             (item) => PillCard(
