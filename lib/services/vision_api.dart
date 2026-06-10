@@ -105,7 +105,7 @@ class VisionApi {
   Future<List<PillIdentifyCandidate>> identifyPill(XFile image) async {
     final response = await _apiClient.postMultipart(
       '/api/vision/identify',
-      auth: true,
+      auth: false,
       fileBytes: await image.readAsBytes(),
       fileName: image.name,
     );
@@ -130,7 +130,7 @@ class VisionApi {
   Future<List<PrescriptionOcrItem>> scanPrescription(XFile image) async {
     final response = await _apiClient.postMultipart(
       '/api/ocr/prescription',
-      auth: true,
+      auth: false,
       fileBytes: await image.readAsBytes(),
       fileName: image.name,
     );
