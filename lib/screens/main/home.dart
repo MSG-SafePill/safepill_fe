@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
+import '../../services/interaction_api.dart';
 import '../../services/local_profile_api.dart';
 import '../../services/schedule_api.dart';
 import '../../services/user_profile_api.dart';
@@ -157,16 +158,20 @@ class _HomeContentState extends State<HomeContent> {
   final ScheduleApi _scheduleApi = ScheduleApi();
   final UserProfileApi _userProfileApi = UserProfileApi();
   final LocalProfileApi _localProfileApi = LocalProfileApi();
+  final InteractionApi _interactionApi = InteractionApi();
   bool _isLoading = true;
+  bool _isInteractionLoading = true;
   String _username = '사용자';
   List<IntakeSchedule> _schedules = [];
   Map<int, IntakeLog> _logsByScheduleId = {};
+  AiInteractionAnalysis? _interactionAnalysis;
 
   @override
   void initState() {
     super.initState();
     _loadUsername();
     _loadTodaySchedules();
+    _loadInteractionAnalysis();
   }
 
   Future<void> _loadUsername() async {
@@ -211,6 +216,31 @@ class _HomeContentState extends State<HomeContent> {
     }
   }
 
+  Future<void> _loadInteractionAnalysis() async {
+    if (mounted) {
+      setState(() => _isInteractionLoading = true);
+    }
+
+    try {
+      final analysis = await _interactionApi.analyzeMyCabinetWithAi();
+      if (mounted) {
+        setState(() => _interactionAnalysis = analysis);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _interactionAnalysis = null);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isInteractionLoading = false);
+      }
+    }
+  }
+
+  Future<void> _refreshHome() async {
+    await Future.wait([_loadTodaySchedules(), _loadInteractionAnalysis()]);
+  }
+
   Future<bool> _setTaken(IntakeSchedule schedule, bool isTaken) async {
     try {
       final existingLog = _logsByScheduleId[schedule.scheduleId];
@@ -253,7 +283,7 @@ class _HomeContentState extends State<HomeContent> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: RefreshIndicator(
-        onRefresh: _loadTodaySchedules,
+        onRefresh: _refreshHome,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 102),
           children: [
@@ -883,6 +913,37 @@ class _HomeContentState extends State<HomeContent> {
   }
 
   Widget _buildAnalysisSummaryCard() {
+    final analysis = _interactionAnalysis;
+    final riskLevel = analysis?.riskLevel ?? 'NONE';
+    final isDanger = riskLevel == 'DANGER';
+    final isCaution = riskLevel == 'WARNING' || riskLevel == 'CAUTION';
+    final statusLabel = isDanger
+        ? '위험'
+        : isCaution
+        ? '주의'
+        : '안전';
+    final statusColor = isDanger
+        ? const Color(0xFFFF6B6B)
+        : isCaution
+        ? const Color(0xFFF5A623)
+        : const Color(0xFF12A87E);
+    final statusBackground = isDanger
+        ? const Color(0xFFFFECEC)
+        : isCaution
+        ? const Color(0xFFFFF3DA)
+        : const Color(0xFFDDF8EF);
+    final icon = isDanger || isCaution
+        ? Icons.warning_amber_rounded
+        : Icons.verified_user_rounded;
+    final summary = _isInteractionLoading
+        ? '상호작용 분석을 확인하는 중입니다.'
+        : (analysis?.summary.isNotEmpty == true
+              ? analysis!.summary
+              : '현재 복용 중인 약 조합은 안전합니다.');
+    final healthTip = isDanger || isCaution
+        ? '상호작용 분석 결과를 확인하고 복용 시간을 조정하세요.'
+        : '규칙적인 복용이 건강의 시작입니다!';
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: _cardDecoration(),
@@ -893,22 +954,18 @@ class _HomeContentState extends State<HomeContent> {
               Container(
                 width: 52,
                 height: 52,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE2FAF3),
+                decoration: BoxDecoration(
+                  color: statusBackground,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.verified_user_rounded,
-                  color: Color(0xFF23C7B5),
-                  size: 30,
-                ),
+                child: Icon(icon, color: statusColor, size: 30),
               ),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       '상호작용 분석 요약',
                       style: TextStyle(
                         color: Color(0xFF23364A),
@@ -916,15 +973,21 @@ class _HomeContentState extends State<HomeContent> {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 7),
+                    const SizedBox(height: 7),
                     Row(
                       children: [
-                        _SafeBadge(),
-                        SizedBox(width: 10),
+                        _RiskBadge(
+                          label: statusLabel,
+                          color: statusColor,
+                          backgroundColor: statusBackground,
+                        ),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            '현재 복용 중인 약 조합은 안전합니다.',
-                            style: TextStyle(
+                            summary,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
                               color: Color(0xFF23364A),
                               fontWeight: FontWeight.w600,
                             ),
@@ -932,10 +995,13 @@ class _HomeContentState extends State<HomeContent> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 7),
+                    const SizedBox(height: 7),
                     Text(
-                      '마지막 분석: 오늘 07:30',
-                      style: TextStyle(color: Color(0xFF8793A3), fontSize: 13),
+                      _isInteractionLoading ? '분석 중' : '마지막 분석: 방금 전',
+                      style: const TextStyle(
+                        color: Color(0xFF8793A3),
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -949,28 +1015,34 @@ class _HomeContentState extends State<HomeContent> {
               color: const Color(0xFFF1F7FF),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF2A8DE5)),
-                SizedBox(width: 8),
-                Text(
+                const Icon(
+                  Icons.lightbulb_outline_rounded,
+                  color: Color(0xFF2A8DE5),
+                ),
+                const SizedBox(width: 8),
+                const Text(
                   '건강 팁',
                   style: TextStyle(
                     color: Color(0xFF2A8DE5),
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                Spacer(),
+                const Spacer(),
                 Flexible(
                   flex: 4,
                   child: Text(
-                    '규칙적인 복용이 건강의 시작입니다!',
+                    healthTip,
                     textAlign: TextAlign.right,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Color(0xFF65758A)),
+                    style: const TextStyle(color: Color(0xFF65758A)),
                   ),
                 ),
-                Icon(Icons.chevron_right_rounded, color: Color(0xFF2A8DE5)),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(0xFF2A8DE5),
+                ),
               ],
             ),
           ),
@@ -1009,20 +1081,28 @@ class _HomeContentState extends State<HomeContent> {
   }
 }
 
-class _SafeBadge extends StatelessWidget {
-  const _SafeBadge();
+class _RiskBadge extends StatelessWidget {
+  const _RiskBadge({
+    required this.label,
+    required this.color,
+    required this.backgroundColor,
+  });
+
+  final String label;
+  final Color color;
+  final Color backgroundColor;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFFDDF8EF),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: const Text(
-        '안전',
-        style: TextStyle(color: Color(0xFF12A87E), fontWeight: FontWeight.w800),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontWeight: FontWeight.w800),
       ),
     );
   }
