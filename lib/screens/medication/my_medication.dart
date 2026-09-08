@@ -3,6 +3,7 @@ import '../../services/api_client.dart';
 import '../../services/medication_api.dart';
 import 'add_medication.dart';
 import 'analysis_result.dart';
+import 'medicine_alternatives.dart';
 
 class MyMedicationScreen extends StatefulWidget {
   const MyMedicationScreen({super.key});
@@ -292,6 +293,8 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
                   ? item.efficacy!
                   : item.manufacturer ?? '',
               isWarning: false,
+              itemId: item.itemId,
+              itemType: item.type,
               onDelete: () => _deleteMyPill(item.regId),
             ),
           )
@@ -357,6 +360,8 @@ class PillCard extends StatefulWidget {
   final String days;
   final String instruction;
   final bool isWarning; // 소진 임박 등 경고 상태 체크
+  final int? itemId;
+  final SearchItemType? itemType;
   final VoidCallback? onDelete;
 
   const PillCard({
@@ -366,6 +371,8 @@ class PillCard extends StatefulWidget {
     required this.days,
     required this.instruction,
     this.isWarning = false,
+    this.itemId,
+    this.itemType,
     this.onDelete,
   });
 
@@ -552,6 +559,38 @@ class _PillCardState extends State<PillCard> {
                 ),
                 Row(
                   children: [
+                    if (widget.itemType == SearchItemType.medicine &&
+                        widget.itemId != null) ...[
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () {
+                            setState(() => _showDeleteMenu = false);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    MedicineAlternativesScreen(
+                                      medicineId: widget.itemId!,
+                                      medicineName: widget.name,
+                                    ),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            '대체약 보기',
+                            style: TextStyle(
+                              color: Color(0xFF2A8DE5),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 20,
+                        color: const Color(0xFFEEEEEE),
+                      ),
+                    ],
                     Expanded(
                       child: TextButton(
                         onPressed: widget.instruction.trim().isEmpty
