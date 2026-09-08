@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../services/api_client.dart';
 import '../../services/vision_api.dart';
 import '../../theme/app_theme.dart';
-import 'prescription_demo_result.dart';
 import 'scan_mode.dart';
 import 'scan_result.dart';
 
@@ -57,24 +56,17 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
   }
 
   Future<void> _analyzeImage(XFile image, Uint8List imageBytes) async {
-    if (_mode == ScanMode.prescription) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              PrescriptionDemoResultScreen(imageBytes: imageBytes),
-        ),
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
     List<PillIdentifyCandidate> pillCandidates = [];
     List<PrescriptionOcrItem> prescriptionItems = [];
     String? errorMessage;
 
     try {
-      pillCandidates = await _visionApi.identifyPill(image);
+      if (_mode == ScanMode.pill) {
+        pillCandidates = await _visionApi.identifyPill(image);
+      } else {
+        prescriptionItems = await _visionApi.scanPrescription(image);
+      }
     } on ApiException catch (e) {
       errorMessage = e.message;
     } catch (_) {
