@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   static const background = Color(0xFFF6FAFF);
-  static const primary = Color(0xFF2F80ED);
+  static const primary = Color(0xFF2A8DE5);
+  static const primaryDeep = Color(0xFF0A58E8);
   static const primaryLight = Color(0xFFEAF3FF);
   static const accent = Color(0xFF42D6C6);
   static const danger = Color(0xFFFF6B6B);
   static const warning = Color(0xFFF5A623);
-  static const navy = Color(0xFF0B1F4D);
-  static const muted = Color(0xFF8A97A8);
+  static const navy = Color(0xFF23364A);
+  static const muted = Color(0xFF65758A);
   static const card = Colors.white;
-  static const line = Color(0xFFE8EEF7);
+  static const line = Color(0xFFE7EEF7);
 }
 
 class AppTextStyles {

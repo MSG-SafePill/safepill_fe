@@ -43,7 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 1. 상단 파란색 헤더 영역 (홈 화면과 완벽 동일한 스타일 적용!)
+        // 1. 상단 헤더 영역 (홈 화면 히어로 카드와 동일한 그라데이션 톤)
         Container(
           width: double.infinity,
           padding: const EdgeInsets.only(
@@ -52,28 +52,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
             right: 20,
             bottom: 30,
           ),
-          decoration: const BoxDecoration(
-            color: Color(0xFF2A8DE5),
-            borderRadius: BorderRadius.only(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF43A3FF), Color(0xFF0A58E8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(25),
               bottomRight: Radius.circular(25),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1975F6).withValues(alpha: 0.22),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text(
-                '안녕하세요, $_nickname님!',
-                style: const TextStyle(
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    width: 1.4,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.person_rounded,
                   color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                  size: 30,
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                '오늘도 건강한 하루 보내세요!',
-                style: TextStyle(color: Colors.white, fontSize: 14),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '안녕하세요, $_nickname님!',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '오늘도 건강한 하루 보내세요!',
+                      style: TextStyle(
+                        color: Color(0xDFFFFFFF),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

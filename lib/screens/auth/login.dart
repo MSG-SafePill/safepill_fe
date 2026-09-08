@@ -33,10 +33,10 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isGoogleLoading = false;
   bool _isGoogleWebReady = false;
 
-  static const Color primaryBlue = Color(0xFF1F6FEA);
-  static const Color deepBlue = Color(0xFF0030C8);
-  static const Color navyText = Color(0xFF0B1F4D);
-  static const Color grayText = Color(0xFF7D8899);
+  static const Color primaryBlue = Color(0xFF2A8DE5);
+  static const Color deepBlue = Color(0xFF0A58E8);
+  static const Color navyText = Color(0xFF23364A);
+  static const Color grayText = Color(0xFF65758A);
   static const Color bgColor = Color(0xFFF6FAFF);
   static const Color fieldBorder = Color(0xFFDDE6F2);
 
