@@ -97,8 +97,21 @@ class _MedicineAlternativesScreenState
                             '현재 등록된 데이터 기준으로 같은 성분을 가진 다른 약을 찾지 못했습니다.\n'
                             '성분 정보가 없거나 유사 약품이 없는 경우일 수 있어요.',
                       )
-                    else
+                    else ...[
+                      if (_alternatives.any((alt) => alt.isAiSuggested))
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Text(
+                            '💡 DB에 등록된 성분 정보가 부족해 AI가 대신 추천한 결과예요. '
+                            '복용 전 반드시 약사·의사와 확인하세요.',
+                            style: AppTextStyles.caption.copyWith(
+                              color: const Color(0xFF7C5CFC),
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
                       ..._alternatives.map(_buildCard),
+                    ],
                   ],
                 ),
               ),
@@ -125,6 +138,13 @@ class _MedicineAlternativesScreenState
                   ),
                 ),
               ),
+              if (alt.isAiSuggested)
+                _Badge(
+                  label: 'AI 추천',
+                  color: const Color(0xFF7C5CFC),
+                  background: const Color(0xFF7C5CFC).withValues(alpha: 0.10),
+                ),
+              const SizedBox(width: 6),
               if (alt.hasCabinetConflict)
                 _Badge(
                   label: '병용주의',
@@ -170,6 +190,15 @@ class _MedicineAlternativesScreenState
                 )
                 .toList(),
           ),
+          if (alt.isAiSuggested &&
+              alt.aiReason != null &&
+              alt.aiReason!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              alt.aiReason!,
+              style: AppTextStyles.caption.copyWith(height: 1.4),
+            ),
+          ],
           if (alt.hasCabinetConflict) ...[
             const SizedBox(height: 10),
             ...alt.conflictReasons.map(

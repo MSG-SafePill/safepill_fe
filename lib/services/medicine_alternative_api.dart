@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'api_client.dart';
 
 class MedicineAlternative {
-  final int id;
+  final int? id;
   final String medicineName;
   final String? manufacturer;
   final List<String> sharedIngredients;
   final bool hasCabinetConflict;
   final List<String> conflictReasons;
+  final bool isAiSuggested;
+  final String? aiReason;
 
   MedicineAlternative({
     required this.id,
@@ -17,11 +19,13 @@ class MedicineAlternative {
     required this.sharedIngredients,
     required this.hasCabinetConflict,
     required this.conflictReasons,
+    this.isAiSuggested = false,
+    this.aiReason,
   });
 
   factory MedicineAlternative.fromJson(Map<String, dynamic> json) {
     return MedicineAlternative(
-      id: (json['id'] as num).toInt(),
+      id: (json['id'] as num?)?.toInt(),
       medicineName: json['medicineName'] as String? ?? '이름 없음',
       manufacturer: json['manufacturer'] as String?,
       sharedIngredients: (json['sharedIngredients'] as List<dynamic>? ?? [])
@@ -31,6 +35,8 @@ class MedicineAlternative {
       conflictReasons: (json['conflictReasons'] as List<dynamic>? ?? [])
           .map((item) => item.toString())
           .toList(),
+      isAiSuggested: json['aiSuggested'] as bool? ?? false,
+      aiReason: json['aiReason'] as String?,
     );
   }
 }
