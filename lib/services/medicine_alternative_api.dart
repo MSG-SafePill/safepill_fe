@@ -10,6 +10,7 @@ class MedicineAlternative {
   final bool hasCabinetConflict;
   final List<String> conflictReasons;
   final bool isAiSuggested;
+  final bool isVerifiedInDb;
   final String? aiReason;
 
   MedicineAlternative({
@@ -20,6 +21,7 @@ class MedicineAlternative {
     required this.hasCabinetConflict,
     required this.conflictReasons,
     this.isAiSuggested = false,
+    this.isVerifiedInDb = false,
     this.aiReason,
   });
 
@@ -36,6 +38,7 @@ class MedicineAlternative {
           .map((item) => item.toString())
           .toList(),
       isAiSuggested: json['aiSuggested'] as bool? ?? false,
+      isVerifiedInDb: json['verifiedInDb'] as bool? ?? false,
       aiReason: json['aiReason'] as String?,
     );
   }

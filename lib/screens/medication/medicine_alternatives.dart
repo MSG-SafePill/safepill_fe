@@ -163,6 +163,35 @@ class _MedicineAlternativesScreenState
             const SizedBox(height: 4),
             Text(alt.manufacturer!, style: AppTextStyles.caption),
           ],
+          if (alt.isAiSuggested) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  alt.isVerifiedInDb
+                      ? Icons.verified_rounded
+                      : Icons.warning_amber_rounded,
+                  size: 13,
+                  color: alt.isVerifiedInDb
+                      ? AppColors.accent
+                      : AppColors.warning,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    alt.isVerifiedInDb
+                        ? '국내 의약품 DB에서 실제 등록을 확인했어요'
+                        : '우리 DB에는 없는 이름이에요 — 실존 여부를 약사·의사에게 꼭 확인하세요',
+                    style: AppTextStyles.caption.copyWith(
+                      color: alt.isVerifiedInDb
+                          ? AppColors.accent
+                          : AppColors.warning,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
           Wrap(
             spacing: 6,
