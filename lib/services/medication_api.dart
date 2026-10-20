@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'api_client.dart';
+import 'ingredient_guide.dart';
 
 enum SearchItemType { medicine, supplement }
 
@@ -75,6 +76,7 @@ class CabinetItem {
   final String? efficacy;
   final String? precautions;
   final List<CabinetIngredient> ingredients;
+  final IngredientGuideAssessment ingredientGuide;
 
   CabinetItem({
     required this.regId,
@@ -87,6 +89,7 @@ class CabinetItem {
     this.efficacy,
     this.precautions,
     this.ingredients = const [],
+    this.ingredientGuide = const IngredientGuideAssessment(),
   });
 
   factory CabinetItem.fromJson(Map<String, dynamic> json) {
@@ -100,6 +103,11 @@ class CabinetItem {
       imageUrl: json['imageUrl'] as String?,
       efficacy: json['efficacy'] as String?,
       precautions: json['precautions'] as String?,
+      ingredientGuide: json['ingredientGuide'] is Map<String, dynamic>
+          ? IngredientGuideAssessment.fromJson(
+              json['ingredientGuide'] as Map<String, dynamic>,
+            )
+          : const IngredientGuideAssessment(),
       ingredients: (json['ingredients'] as List<dynamic>? ?? [])
           .map(
             (item) => CabinetIngredient.fromJson(item as Map<String, dynamic>),

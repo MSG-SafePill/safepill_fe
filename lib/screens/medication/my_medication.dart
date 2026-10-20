@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
 import '../../services/medication_api.dart';
+import '../../services/ingredient_guide.dart';
+import 'ingredient_guide_panel.dart';
 import 'add_medication.dart';
 import 'analysis_result.dart';
 import 'medicine_alternatives.dart';
@@ -293,6 +295,7 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
                   ? item.efficacy!
                   : item.manufacturer ?? '',
               isWarning: false,
+              ingredientGuide: item.ingredientGuide,
               itemId: item.itemId,
               itemType: item.type,
               onDelete: () => _deleteMyPill(item.regId),
@@ -363,6 +366,7 @@ class PillCard extends StatefulWidget {
   final int? itemId;
   final SearchItemType? itemType;
   final VoidCallback? onDelete;
+  final IngredientGuideAssessment ingredientGuide;
 
   const PillCard({
     super.key,
@@ -374,6 +378,7 @@ class PillCard extends StatefulWidget {
     this.itemId,
     this.itemType,
     this.onDelete,
+    this.ingredientGuide = const IngredientGuideAssessment(),
   });
 
   @override
@@ -461,107 +466,121 @@ class _PillCardState extends State<PillCard> {
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFFFF8E1),
-          child: Text(widget.icon, style: const TextStyle(fontSize: 20)),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                widget.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
+      child: Column(
+        children: [
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 5,
             ),
-            if (widget.isWarning)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFEBEE),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  '소진 임박',
-                  style: TextStyle(
-                    color: Color(0xFFFF5252),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        subtitle: Text.rich(
-          TextSpan(
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
-            children: [
-              const TextSpan(text: '남은 약: '),
-              TextSpan(
-                text: widget.days,
-                style: TextStyle(
-                  color: widget.isWarning
-                      ? const Color(0xFFFF5252)
-                      : Colors.black,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (widget.instruction.trim().isNotEmpty)
-                TextSpan(
-                  text: '  •  ${widget.instruction.trim()}',
-                  style: const TextStyle(
-                    color: Color(0xFF2A8DE5),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-            ],
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        // 우측 점 3개 버튼 (팝업 메뉴)
-        trailing: PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, color: Colors.grey),
-          onSelected: (value) {
-            switch (value) {
-              case 'alternatives':
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => MedicineAlternativesScreen(
-                      medicineId: widget.itemId!,
-                      medicineName: widget.name,
+            leading: CircleAvatar(
+              backgroundColor: const Color(0xFFFFF8E1),
+              child: Text(widget.icon, style: const TextStyle(fontSize: 20)),
+            ),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
-                );
-                break;
-              case 'detail':
-                _showInstructionDetail();
-                break;
-              case 'delete':
-                widget.onDelete?.call();
-                break;
-            }
-          },
-          itemBuilder: (context) => [
-            if (widget.itemType == SearchItemType.medicine &&
-                widget.itemId != null)
-              const PopupMenuItem(value: 'alternatives', child: Text('대체약 보기')),
-            PopupMenuItem(
-              value: 'detail',
-              enabled: widget.instruction.trim().isNotEmpty,
-              child: const Text('자세히 보기'),
+                ),
+                if (widget.isWarning)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      '소진 임박',
+                      style: TextStyle(
+                        color: Color(0xFFFF5252),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Text('삭제', style: TextStyle(color: Color(0xFFFF5252))),
+            subtitle: Text.rich(
+              TextSpan(
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                children: [
+                  const TextSpan(text: '남은 약: '),
+                  TextSpan(
+                    text: widget.days,
+                    style: TextStyle(
+                      color: widget.isWarning
+                          ? const Color(0xFFFF5252)
+                          : Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (widget.instruction.trim().isNotEmpty)
+                    TextSpan(
+                      text: '  •  ${widget.instruction.trim()}',
+                      style: const TextStyle(
+                        color: Color(0xFF2A8DE5),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                ],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ],
-        ),
+            // 우측 점 3개 버튼 (팝업 메뉴)
+            trailing: PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: Colors.grey),
+              onSelected: (value) {
+                switch (value) {
+                  case 'alternatives':
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MedicineAlternativesScreen(
+                          medicineId: widget.itemId!,
+                          medicineName: widget.name,
+                        ),
+                      ),
+                    );
+                    break;
+                  case 'detail':
+                    _showInstructionDetail();
+                    break;
+                  case 'delete':
+                    widget.onDelete?.call();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                if (widget.itemType == SearchItemType.medicine &&
+                    widget.itemId != null)
+                  const PopupMenuItem(
+                    value: 'alternatives',
+                    child: Text('대체약 보기'),
+                  ),
+                PopupMenuItem(
+                  value: 'detail',
+                  enabled: widget.instruction.trim().isNotEmpty,
+                  child: const Text('자세히 보기'),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Text('삭제', style: TextStyle(color: Color(0xFFFF5252))),
+                ),
+              ],
+            ),
+          ),
+          IngredientGuidePanel(assessment: widget.ingredientGuide),
+        ],
       ),
     );
   }
