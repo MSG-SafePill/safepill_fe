@@ -8,21 +8,25 @@ import 'analysis_result.dart';
 import 'medicine_alternatives.dart';
 
 class MyMedicationScreen extends StatefulWidget {
-  const MyMedicationScreen({super.key});
+  const MyMedicationScreen({super.key, this.medicationApi});
+
+  final MedicationApi? medicationApi;
 
   @override
   State<MyMedicationScreen> createState() => _MyMedicationScreenState();
 }
 
 class _MyMedicationScreenState extends State<MyMedicationScreen> {
-  final MedicationApi _medicationApi = MedicationApi();
+  late final MedicationApi _medicationApi;
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
+  String? _loadError;
   List<CabinetItem> _items = [];
 
   @override
   void initState() {
     super.initState();
+    _medicationApi = widget.medicationApi ?? MedicationApi();
     _loadMyPills();
     _searchController.addListener(() => setState(() {}));
   }
@@ -34,7 +38,11 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
   }
 
   Future<void> _loadMyPills() async {
-    setState(() => _isLoading = true);
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
     try {
       final items = await _medicationApi.getMyPills();
       if (mounted) {
@@ -42,11 +50,12 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 2),
-            content: Text('약장 조회 실패: ${e.message}'),
-          ),
+        setState(() => _loadError = '약장 조회 실패: ${e.message}');
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _loadError = '약장 정보를 불러오지 못했습니다. 연결 상태를 확인하고 다시 시도해주세요.',
         );
       }
     } finally {
@@ -77,14 +86,28 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
           ),
         );
       }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('삭제하지 못했습니다. 연결 상태를 확인하고 다시 시도해주세요.')),
+        );
+      }
     }
   }
 
   List<CabinetItem> _filteredItems(SearchItemType? type) {
-    final keyword = _searchController.text.trim();
+    String normalize(String value) =>
+        value.toLowerCase().replaceAll(RegExp(r'\s+'), '');
+    final keyword = normalize(_searchController.text);
     return _items.where((item) {
       final typeMatched = type == null || item.type == type;
-      final keywordMatched = keyword.isEmpty || item.itemName.contains(keyword);
+      final keywordMatched =
+          keyword.isEmpty ||
+          normalize(item.itemName).contains(keyword) ||
+          item.ingredients.any(
+            (ingredient) =>
+                normalize(ingredient.ingredientName).contains(keyword),
+          );
       return typeMatched && keywordMatched;
     }).toList();
   }
@@ -109,6 +132,23 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
                 Expanded(
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
+                      : _loadError != null
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(_loadError!, textAlign: TextAlign.center),
+                                const SizedBox(height: 12),
+                                FilledButton(
+                                  onPressed: _loadMyPills,
+                                  child: const Text('다시 시도'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
                       : TabBarView(
                           children: [
                             _buildPillList(_filteredItems(null)),
@@ -288,6 +328,7 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
       children: items
           .map(
             (item) => PillCard(
+              key: ValueKey(item.regId),
               icon: item.type == SearchItemType.medicine ? '💊' : '🌿',
               name: item.itemName,
               days: item.supplyDays == null ? '미설정' : '${item.supplyDays}일',
@@ -466,121 +507,129 @@ class _PillCardState extends State<PillCard> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 5,
-            ),
-            leading: CircleAvatar(
-              backgroundColor: const Color(0xFFFFF8E1),
-              child: Text(widget.icon, style: const TextStyle(fontSize: 20)),
-            ),
-            title: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                if (widget.isWarning)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEE),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      '소진 임박',
-                      style: TextStyle(
-                        color: Color(0xFFFF5252),
-                        fontSize: 10,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 5,
+              ),
+              leading: CircleAvatar(
+                backgroundColor: const Color(0xFFFFF8E1),
+                child: Text(widget.icon, style: const TextStyle(fontSize: 20)),
+              ),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.name,
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
                   ),
-              ],
-            ),
-            subtitle: Text.rich(
-              TextSpan(
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-                children: [
-                  const TextSpan(text: '남은 약: '),
-                  TextSpan(
-                    text: widget.days,
-                    style: TextStyle(
-                      color: widget.isWarning
-                          ? const Color(0xFFFF5252)
-                          : Colors.black,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (widget.instruction.trim().isNotEmpty)
-                    TextSpan(
-                      text: '  •  ${widget.instruction.trim()}',
-                      style: const TextStyle(
-                        color: Color(0xFF2A8DE5),
-                        fontWeight: FontWeight.bold,
+                  if (widget.isWarning)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBEE),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        '소진 임박',
+                        style: TextStyle(
+                          color: Color(0xFFFF5252),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                 ],
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            // 우측 점 3개 버튼 (팝업 메뉴)
-            trailing: PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.grey),
-              onSelected: (value) {
-                switch (value) {
-                  case 'alternatives':
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MedicineAlternativesScreen(
-                          medicineId: widget.itemId!,
-                          medicineName: widget.name,
+              subtitle: Text.rich(
+                TextSpan(
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  children: [
+                    const TextSpan(text: '남은 약: '),
+                    TextSpan(
+                      text: widget.days,
+                      style: TextStyle(
+                        color: widget.isWarning
+                            ? const Color(0xFFFF5252)
+                            : Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (widget.instruction.trim().isNotEmpty)
+                      TextSpan(
+                        text: '  •  ${widget.instruction.trim()}',
+                        style: const TextStyle(
+                          color: Color(0xFF2A8DE5),
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    );
-                    break;
-                  case 'detail':
-                    _showInstructionDetail();
-                    break;
-                  case 'delete':
-                    widget.onDelete?.call();
-                    break;
-                }
-              },
-              itemBuilder: (context) => [
-                if (widget.itemType == SearchItemType.medicine &&
-                    widget.itemId != null)
-                  const PopupMenuItem(
-                    value: 'alternatives',
-                    child: Text('대체약 보기'),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              // 우측 점 3개 버튼 (팝업 메뉴)
+              trailing: PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.grey),
+                onSelected: (value) {
+                  switch (value) {
+                    case 'alternatives':
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MedicineAlternativesScreen(
+                            medicineId: widget.itemId!,
+                            medicineName: widget.name,
+                          ),
+                        ),
+                      );
+                      break;
+                    case 'detail':
+                      _showInstructionDetail();
+                      break;
+                    case 'delete':
+                      widget.onDelete?.call();
+                      break;
+                  }
+                },
+                itemBuilder: (context) => [
+                  if (widget.itemType == SearchItemType.medicine &&
+                      widget.itemId != null)
+                    const PopupMenuItem(
+                      value: 'alternatives',
+                      child: Text('대체약 보기'),
+                    ),
+                  PopupMenuItem(
+                    value: 'detail',
+                    enabled: widget.instruction.trim().isNotEmpty,
+                    child: const Text('자세히 보기'),
                   ),
-                PopupMenuItem(
-                  value: 'detail',
-                  enabled: widget.instruction.trim().isNotEmpty,
-                  child: const Text('자세히 보기'),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Text('삭제', style: TextStyle(color: Color(0xFFFF5252))),
-                ),
-              ],
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text(
+                      '삭제',
+                      style: TextStyle(color: Color(0xFFFF5252)),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          IngredientGuidePanel(assessment: widget.ingredientGuide),
-        ],
+            IngredientGuidePanel(assessment: widget.ingredientGuide),
+          ],
+        ),
       ),
     );
   }
