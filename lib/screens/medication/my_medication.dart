@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
 import '../../services/medication_api.dart';
 import '../../services/ingredient_guide.dart';
+import '../../services/cabinet_guide_filter.dart';
 import 'ingredient_guide_panel.dart';
 import 'ingredient_guide_screen.dart';
 import 'ingredient_overlap_panel.dart';
@@ -25,6 +26,7 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
   bool _isLoading = true;
   String? _loadError;
   List<CabinetItem> _items = [];
+  CabinetGuideFilter _guideFilter = CabinetGuideFilter.all;
 
   @override
   void initState() {
@@ -102,6 +104,7 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
     String normalize(String value) =>
         value.toLowerCase().replaceAll(RegExp(r'\s+'), '');
     final keyword = normalize(_searchController.text);
+    final registeredIds = _items.map((item) => item.regId).toSet();
     return _items.where((item) {
       final typeMatched = type == null || item.type == type;
       final keywordMatched =
@@ -111,7 +114,9 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
             (ingredient) =>
                 normalize(ingredient.ingredientName).contains(keyword),
           );
-      return typeMatched && keywordMatched;
+      return typeMatched &&
+          keywordMatched &&
+          _guideFilter.matches(item, registeredIds);
     }).toList();
   }
 
@@ -145,6 +150,7 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                   child: _buildSearchField(),
                 ),
+                if (!_isLoading && _loadError == null) _buildGuideFilters(),
                 Expanded(
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
@@ -334,8 +340,55 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
     );
   }
 
+  Widget _buildGuideFilters() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      child: Row(
+        children: [
+          for (final filter in CabinetGuideFilter.values)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(filter.label),
+                selected: _guideFilter == filter,
+                onSelected: (_) => setState(() => _guideFilter = filter),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPillList(List<CabinetItem> items) {
     if (items.isEmpty) {
+      if (_items.isNotEmpty) {
+        return Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('조건에 맞는 항목이 없습니다.'),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '검색어·상태 필터·제품 탭을 확인하세요.\n표시되는 항목이 없다고 안전함을 의미하지는 않습니다.',
+                    textAlign: TextAlign.center,
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _guideFilter = CabinetGuideFilter.all);
+                    },
+                    child: const Text('검색·상태 필터 초기화'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
       return const _EmptyMedicationList();
     }
 
@@ -371,44 +424,46 @@ class _EmptyMedicationList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 0, 28, 90),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEAF3FF),
-                shape: BoxShape.circle,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 0, 28, 90),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEAF3FF),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.medication_liquid_rounded,
+                  color: Color(0xFF2A8DE5),
+                  size: 36,
+                ),
               ),
-              child: const Icon(
-                Icons.medication_liquid_rounded,
-                color: Color(0xFF2A8DE5),
-                size: 36,
+              const SizedBox(height: 16),
+              const Text(
+                '등록된 항목이 없습니다',
+                style: TextStyle(
+                  color: Color(0xFF23364A),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '등록된 항목이 없습니다',
-              style: TextStyle(
-                color: Color(0xFF23364A),
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
+              const SizedBox(height: 8),
+              const Text(
+                '오른쪽 아래 + 버튼으로 복용 중인 약이나 영양제를 등록하세요.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFF65758A),
+                  fontSize: 14,
+                  height: 1.45,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '오른쪽 아래 + 버튼으로 복용 중인 약이나 영양제를 등록하세요.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF65758A),
-                fontSize: 14,
-                height: 1.45,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
