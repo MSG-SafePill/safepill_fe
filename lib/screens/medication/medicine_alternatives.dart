@@ -170,7 +170,7 @@ class _MedicineAlternativesScreenState
                 )
               else
                 const _Badge(
-                  label: '충돌 없음',
+                  label: '규칙상 문제 없음',
                   icon: Icons.check_circle_rounded,
                   color: Color(0xFF1FB5A5),
                 ),
@@ -630,7 +630,8 @@ class _Disclaimer extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Text(
-        '※ 대체약 정보는 참고용이에요. 성분·함량이 같아도 사람에 따라 맞지 않을 수 있으니 '
+        '※ 대체약 정보는 참고용이에요. "규칙상 문제 없음"은 등록된 병용·중복 규칙에 걸리지 않았다는 뜻이며 '
+        '안전을 보증하지 않아요. 성분·함량이 같아도 사람에 따라 맞지 않을 수 있으니 '
         '복용 전 반드시 의사·약사와 상담하세요.',
         style: AppTextStyles.caption.copyWith(height: 1.5),
       ),
