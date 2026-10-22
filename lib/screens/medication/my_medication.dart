@@ -3,6 +3,8 @@ import '../../services/api_client.dart';
 import '../../services/medication_api.dart';
 import '../../services/ingredient_guide.dart';
 import 'ingredient_guide_panel.dart';
+import 'ingredient_overlap_panel.dart';
+import '../../services/ingredient_overlap.dart';
 import 'add_medication.dart';
 import 'analysis_result.dart';
 import 'medicine_alternatives.dart';
@@ -337,6 +339,8 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
                   : item.manufacturer ?? '',
               isWarning: false,
               ingredientGuide: item.ingredientGuide,
+              ingredientOverlaps: item.ingredientOverlaps,
+              registeredIds: _items.map((item) => item.regId).toSet(),
               itemId: item.itemId,
               itemType: item.type,
               onDelete: () => _deleteMyPill(item.regId),
@@ -408,6 +412,8 @@ class PillCard extends StatefulWidget {
   final SearchItemType? itemType;
   final VoidCallback? onDelete;
   final IngredientGuideAssessment ingredientGuide;
+  final List<IngredientOverlap> ingredientOverlaps;
+  final Set<int> registeredIds;
 
   const PillCard({
     super.key,
@@ -420,6 +426,8 @@ class PillCard extends StatefulWidget {
     this.itemType,
     this.onDelete,
     this.ingredientGuide = const IngredientGuideAssessment(),
+    this.ingredientOverlaps = const [],
+    this.registeredIds = const {},
   });
 
   @override
@@ -628,6 +636,10 @@ class _PillCardState extends State<PillCard> {
               ),
             ),
             IngredientGuidePanel(assessment: widget.ingredientGuide),
+            IngredientOverlapPanel(
+              overlaps: widget.ingredientOverlaps,
+              registeredIds: widget.registeredIds,
+            ),
           ],
         ),
       ),

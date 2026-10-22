@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'api_client.dart';
 import 'ingredient_guide.dart';
+import 'ingredient_overlap.dart';
 
 enum SearchItemType { medicine, supplement }
 
@@ -77,6 +78,7 @@ class CabinetItem {
   final String? precautions;
   final List<CabinetIngredient> ingredients;
   final IngredientGuideAssessment ingredientGuide;
+  final List<IngredientOverlap> ingredientOverlaps;
 
   CabinetItem({
     required this.regId,
@@ -90,6 +92,7 @@ class CabinetItem {
     this.precautions,
     this.ingredients = const [],
     this.ingredientGuide = const IngredientGuideAssessment(),
+    this.ingredientOverlaps = const [],
   });
 
   factory CabinetItem.fromJson(Map<String, dynamic> json) {
@@ -103,6 +106,11 @@ class CabinetItem {
       imageUrl: json['imageUrl'] as String?,
       efficacy: json['efficacy'] as String?,
       precautions: json['precautions'] as String?,
+      ingredientOverlaps: (json['ingredientOverlaps'] as List<dynamic>? ?? [])
+          .map(
+            (item) => IngredientOverlap.fromJson(item as Map<String, dynamic>),
+          )
+          .toList(),
       ingredientGuide: json['ingredientGuide'] is Map<String, dynamic>
           ? IngredientGuideAssessment.fromJson(
               json['ingredientGuide'] as Map<String, dynamic>,
