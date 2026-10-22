@@ -3,6 +3,7 @@ import '../../services/api_client.dart';
 import '../../services/medication_api.dart';
 import '../../services/ingredient_guide.dart';
 import 'ingredient_guide_panel.dart';
+import 'ingredient_guide_screen.dart';
 import 'ingredient_overlap_panel.dart';
 import '../../services/ingredient_overlap.dart';
 import 'add_medication.dart';
@@ -127,6 +128,19 @@ class _MyMedicationScreenState extends State<MyMedicationScreen> {
               children: [
                 _buildHeader(),
                 _buildTabBar(),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.menu_book_outlined),
+                    label: const Text('성분 가이드'),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const IngredientGuideScreen(),
+                      ),
+                    ),
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                   child: _buildSearchField(),
