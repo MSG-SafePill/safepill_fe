@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
 import '../../services/medication_api.dart';
 import '../../services/schedule_api.dart';
+import 'medication_preview_dialog.dart';
 
 class AddMedicationScreen extends StatefulWidget {
   final String? initialKeyword;
+  final MedicationApi? medicationApi;
 
-  const AddMedicationScreen({super.key, this.initialKeyword});
+  const AddMedicationScreen({
+    super.key,
+    this.initialKeyword,
+    this.medicationApi,
+  });
 
   @override
   State<AddMedicationScreen> createState() => _AddMedicationScreenState();
@@ -15,7 +21,7 @@ class AddMedicationScreen extends StatefulWidget {
 class _AddMedicationScreenState extends State<AddMedicationScreen> {
   // [상태 변수]
   final TextEditingController _searchController = TextEditingController();
-  final MedicationApi _medicationApi = MedicationApi();
+  late final MedicationApi _medicationApi;
   final ScheduleApi _scheduleApi = ScheduleApi();
   bool isPrescription = true;
   Set<String> selectedTimes = {};
@@ -28,13 +34,13 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   SearchItemType get _selectedType =>
       isPrescription ? SearchItemType.medicine : SearchItemType.supplement;
 
-  List<MedicationSearchItem> get _visibleSearchResults => _searchResults
-      .where((item) => item.type == _selectedType)
-      .toList();
+  List<MedicationSearchItem> get _visibleSearchResults =>
+      _searchResults.where((item) => item.type == _selectedType).toList();
 
   @override
   void initState() {
     super.initState();
+    _medicationApi = widget.medicationApi ?? MedicationApi();
     final keyword = widget.initialKeyword?.trim();
     if (keyword != null && keyword.isNotEmpty) {
       _searchController.text = keyword;
@@ -55,9 +61,12 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   Future<void> _searchMedications() async {
     final keyword = _searchController.text.trim();
     if (keyword.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('검색어를 입력해주세요.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          duration: Duration(seconds: 2),
+          content: Text('검색어를 입력해주세요.'),
+        ),
+      );
       return;
     }
 
@@ -75,15 +84,21 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('검색 실패: ${e.message}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 2),
+            content: Text('검색 실패: ${e.message}'),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('서버와 연결할 수 없습니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            duration: Duration(seconds: 2),
+            content: Text('서버와 연결할 수 없습니다.'),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -95,23 +110,33 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   }
 
   Future<void> _addMedication() async {
+    if (_isSaving) return;
     final selectedItem = _selectedItem;
     if (selectedItem == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('내 약장에 추가할 약품을 선택해주세요.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          duration: Duration(seconds: 2),
+          content: Text('내 약장에 추가할 약품을 선택해주세요.'),
+        ),
+      );
       return;
     }
     if (selectedItem.type != _selectedType) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('선택한 분류에 맞는 검색 결과를 다시 선택해주세요.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          duration: Duration(seconds: 2),
+          content: Text('선택한 분류에 맞는 검색 결과를 다시 선택해주세요.'),
+        ),
+      );
       return;
     }
     if (selectedItem.registered) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('이미 내 약장에 등록된 항목입니다.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          duration: Duration(seconds: 2),
+          content: Text('이미 내 약장에 등록된 항목입니다.'),
+        ),
+      );
       return;
     }
 
@@ -119,26 +144,45 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       _isSaving = true;
     });
 
+    bool previewComplete = false;
     try {
+      final preview = await _medicationApi.previewMedication(selectedItem);
+      if (!mounted) return;
+      if (!await showMedicationPreview(context, [preview])) return;
+      if (!mounted) return;
+      previewComplete = true;
       await _medicationApi.addToMyPills(selectedItem, supplyDays: days);
       await _createSchedulesIfSelected(selectedItem);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('내 약장에 추가되었습니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            duration: Duration(seconds: 2),
+            content: Text('내 약장에 추가되었습니다.'),
+          ),
+        );
         Navigator.pop(context);
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text('추가 실패: ${e.message}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 2),
+            content: Text(
+              previewComplete
+                  ? '추가 실패: ${e.message}'
+                  : '등록 전 확인 실패: ${e.message}',
+            ),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('서버와 연결할 수 없습니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            duration: Duration(seconds: 2),
+            content: Text('서버와 연결할 수 없습니다.'),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -223,184 +267,189 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       ),
 
       // [메인 입력 폼 영역]
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. 약품명 검색 입력창
-            _buildSectionTitle('약품명 또는 성분명', isRequired: true),
-            TextField(
-              controller: _searchController,
-              onSubmitted: (_) => _searchMedications(),
-              decoration: InputDecoration(
-                hintText: '예: 타이레놀, 오메가3',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                suffixIcon: IconButton(
-                  icon: _isSearching
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(
-                          Icons.arrow_forward,
-                          color: Color(0xFF2A8DE5),
-                        ),
-                  onPressed: _isSearching ? null : _searchMedications,
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Row(
-              children: [
-                Icon(Icons.info, color: Color(0xFF2A8DE5), size: 14),
-                SizedBox(width: 4),
-                Text(
-                  '정확한 상극 분석(DUR)을 위해 제품명을 검색해 주세요.',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-            if (_searchResults.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              if (_visibleSearchResults.isEmpty)
-                Text(
-                  isPrescription
-                      ? '검색된 의약품이 없습니다. 영양제 결과를 보려면 분류를 변경하세요.'
-                      : '검색된 영양제가 없습니다. 의약품 결과를 보려면 분류를 변경하세요.',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                )
-              else
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 312),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    physics: _visibleSearchResults.length > 4
-                        ? const AlwaysScrollableScrollPhysics()
-                        : const NeverScrollableScrollPhysics(),
-                    itemCount: _visibleSearchResults.length,
-                    itemBuilder: (context, index) =>
-                        _buildSearchResultTile(_visibleSearchResults[index]),
-                  ),
-                ),
-            ],
-            const SizedBox(height: 30),
-
-            // 2. 약품 분류 선택 (처방약/일반약 vs 영양제)
-            _buildSectionTitle('분류'),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildToggleButton(
-                    '처방약 / 일반약',
-                    isPrescription,
-                    () => _selectCategory(SearchItemType.medicine),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildToggleButton(
-                    '영양제',
-                    !isPrescription,
-                    () => _selectCategory(SearchItemType.supplement),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 30),
-
-            // 3. 복용 시간 선택 (그리드 형태 다중 선택)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildSectionTitle('복용 시간', isRequired: true),
-                const Text(
-                  '다중 선택 가능',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children:
-                  [
-                        _buildTimeButton('☀️ 아침 식전'),
-                        _buildTimeButton('☀️ 아침 식후'),
-                        _buildTimeButton('⛅ 점심 식전'),
-                        _buildTimeButton('⛅ 점심 식후'),
-                        _buildTimeButton('🌙 저녁 식전'),
-                        _buildTimeButton('🌙 저녁 식후'),
-                        _buildTimeButton('🛌 취침 전'),
-                      ]
-                      .map(
-                        (widget) => FractionallySizedBox(
-                          widthFactor: 0.48,
-                          child: widget,
-                        ),
-                      )
-                      .toList(),
-            ),
-            const SizedBox(height: 10),
-            _buildTimeButton('시간 상관없이 필요 시 복용', isFullWidth: true),
-            const SizedBox(height: 30),
-
-            // 4. 복용 일수 카운터
-            _buildSectionTitle('처방/구매 일수'),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('총 며칠 분량인가요?', style: TextStyle(fontSize: 14)),
-                  Row(
-                    children: [
-                      _buildRoundButton(
-                        Icons.remove,
-                        () => setState(() => days > 1 ? days-- : null),
-                      ),
-                      SizedBox(
-                        width: 40,
-                        child: Text(
-                          '$days',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+      body: AbsorbPointer(
+        absorbing: _isSaving,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. 약품명 검색 입력창
+              _buildSectionTitle('약품명 또는 성분명', isRequired: true),
+              TextField(
+                controller: _searchController,
+                onSubmitted: (_) => _searchMedications(),
+                decoration: InputDecoration(
+                  hintText: '예: 타이레놀, 오메가3',
+                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                  suffixIcon: IconButton(
+                    icon: _isSearching
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(
+                            Icons.arrow_forward,
                             color: Color(0xFF2A8DE5),
                           ),
-                        ),
-                      ),
-                      _buildRoundButton(
-                        Icons.add,
-                        () => setState(() => days++),
-                      ),
-                    ],
+                    onPressed: _isSearching ? null : _searchMedications,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Row(
+                children: [
+                  Icon(Icons.info, color: Color(0xFF2A8DE5), size: 14),
+                  SizedBox(width: 4),
+                  Text(
+                    '정확한 상극 분석(DUR)을 위해 제품명을 검색해 주세요.',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 40),
-          ],
+              if (_searchResults.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                if (_visibleSearchResults.isEmpty)
+                  Text(
+                    isPrescription
+                        ? '검색된 의약품이 없습니다. 영양제 결과를 보려면 분류를 변경하세요.'
+                        : '검색된 영양제가 없습니다. 의약품 결과를 보려면 분류를 변경하세요.',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  )
+                else
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 312),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      physics: _visibleSearchResults.length > 4
+                          ? const AlwaysScrollableScrollPhysics()
+                          : const NeverScrollableScrollPhysics(),
+                      itemCount: _visibleSearchResults.length,
+                      itemBuilder: (context, index) =>
+                          _buildSearchResultTile(_visibleSearchResults[index]),
+                    ),
+                  ),
+              ],
+              const SizedBox(height: 30),
+
+              // 2. 약품 분류 선택 (처방약/일반약 vs 영양제)
+              _buildSectionTitle('분류'),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildToggleButton(
+                      '처방약 / 일반약',
+                      isPrescription,
+                      () => _selectCategory(SearchItemType.medicine),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildToggleButton(
+                      '영양제',
+                      !isPrescription,
+                      () => _selectCategory(SearchItemType.supplement),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 30),
+
+              // 3. 복용 시간 선택 (그리드 형태 다중 선택)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildSectionTitle('복용 시간', isRequired: true),
+                  const Text(
+                    '다중 선택 가능',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children:
+                    [
+                          _buildTimeButton('☀️ 아침 식전'),
+                          _buildTimeButton('☀️ 아침 식후'),
+                          _buildTimeButton('⛅ 점심 식전'),
+                          _buildTimeButton('⛅ 점심 식후'),
+                          _buildTimeButton('🌙 저녁 식전'),
+                          _buildTimeButton('🌙 저녁 식후'),
+                          _buildTimeButton('🛌 취침 전'),
+                        ]
+                        .map(
+                          (widget) => FractionallySizedBox(
+                            widthFactor: 0.48,
+                            child: widget,
+                          ),
+                        )
+                        .toList(),
+              ),
+              const SizedBox(height: 10),
+              _buildTimeButton('시간 상관없이 필요 시 복용', isFullWidth: true),
+              const SizedBox(height: 30),
+
+              // 4. 복용 일수 카운터
+              _buildSectionTitle('처방/구매 일수'),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 15,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('총 며칠 분량인가요?', style: TextStyle(fontSize: 14)),
+                    Row(
+                      children: [
+                        _buildRoundButton(
+                          Icons.remove,
+                          () => setState(() => days > 1 ? days-- : null),
+                        ),
+                        SizedBox(
+                          width: 40,
+                          child: Text(
+                            '$days',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2A8DE5),
+                            ),
+                          ),
+                        ),
+                        _buildRoundButton(
+                          Icons.add,
+                          () => setState(() => days++),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
-
       // [하단 고정 버튼 영역]
       bottomNavigationBar: SafeArea(
         child: Padding(
@@ -418,7 +467,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                 elevation: 0,
               ),
               child: Text(
-                _isSaving ? '추가 중...' : '마이약장에 추가하기',
+                _isSaving ? '확인·등록 중...' : '마이약장에 추가하기',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -550,9 +599,12 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     return GestureDetector(
       onTap: () {
         if (item.registered) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(duration: Duration(seconds: 2), content: Text('이미 등록된 항목입니다.')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              duration: Duration(seconds: 2),
+              content: Text('이미 등록된 항목입니다.'),
+            ),
+          );
           return;
         }
         setState(() {

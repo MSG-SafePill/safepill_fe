@@ -8,6 +8,7 @@ import '../../services/ocr_registration_api.dart';
 import '../../services/vision_api.dart';
 import '../../theme/app_theme.dart';
 import '../medication/add_medication.dart';
+import '../medication/medication_preview_dialog.dart';
 import 'scan_mode.dart';
 
 class ScanResultScreen extends StatefulWidget {
@@ -18,6 +19,8 @@ class ScanResultScreen extends StatefulWidget {
     required this.pillCandidates,
     required this.prescriptionItems,
     this.errorMessage,
+    this.medicationApi,
+    this.ocrRegistrationApi,
   });
 
   final ScanMode mode;
@@ -25,15 +28,25 @@ class ScanResultScreen extends StatefulWidget {
   final List<PillIdentifyCandidate> pillCandidates;
   final List<PrescriptionOcrItem> prescriptionItems;
   final String? errorMessage;
+  final MedicationApi? medicationApi;
+  final OcrRegistrationApi? ocrRegistrationApi;
 
   @override
   State<ScanResultScreen> createState() => _ScanResultScreenState();
 }
 
 class _ScanResultScreenState extends State<ScanResultScreen> {
-  final OcrRegistrationApi _ocrRegistrationApi = OcrRegistrationApi();
+  late final OcrRegistrationApi _ocrRegistrationApi;
+  late final MedicationApi _medicationApi;
   final Map<String, MedicationMatchCandidate> _selectedOcrCandidates = {};
   bool _isRegistering = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ocrRegistrationApi = widget.ocrRegistrationApi ?? OcrRegistrationApi();
+    _medicationApi = widget.medicationApi ?? MedicationApi();
+  }
 
   bool get _hasResults {
     if (widget.errorMessage != null) {
@@ -53,50 +66,55 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-        children: [
-          Center(
-            child: Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: (_hasResults ? AppColors.primary : Colors.redAccent)
-                    .withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _hasResults ? Icons.check_rounded : Icons.priority_high_rounded,
-                color: _hasResults ? AppColors.primary : Colors.redAccent,
-                size: 36,
+      body: AbsorbPointer(
+        absorbing: _isRegistering,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+          children: [
+            Center(
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: (_hasResults ? AppColors.primary : Colors.redAccent)
+                      .withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _hasResults
+                      ? Icons.check_rounded
+                      : Icons.priority_high_rounded,
+                  color: _hasResults ? AppColors.primary : Colors.redAccent,
+                  size: 36,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            _title,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.title.copyWith(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _subtitle,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.caption,
-          ),
-          const SizedBox(height: 22),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: AspectRatio(
-              aspectRatio: 16 / 10,
-              child: Image.memory(widget.imageBytes, fit: BoxFit.cover),
+            const SizedBox(height: 18),
+            Text(
+              _title,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.title.copyWith(fontWeight: FontWeight.w900),
             ),
-          ),
-          const SizedBox(height: 26),
-          if (widget.mode == ScanMode.pill) ..._buildPillResults(),
-          if (widget.mode == ScanMode.prescription)
-            ..._buildPrescriptionResults(),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              _subtitle,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.caption,
+            ),
+            const SizedBox(height: 22),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: AspectRatio(
+                aspectRatio: 16 / 10,
+                child: Image.memory(widget.imageBytes, fit: BoxFit.cover),
+              ),
+            ),
+            const SizedBox(height: 26),
+            if (widget.mode == ScanMode.pill) ..._buildPillResults(),
+            if (widget.mode == ScanMode.prescription)
+              ..._buildPrescriptionResults(),
+          ],
+        ),
       ),
     );
   }
@@ -307,8 +325,26 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
   Future<void> _registerSelections(
     List<OcrRegistrationSelection> selections,
   ) async {
+    if (_isRegistering) return;
     setState(() => _isRegistering = true);
+    bool previewComplete = false;
     try {
+      final previews = await Future.wait(
+        selections.map((selection) {
+          final candidate = selection.candidate;
+          return _medicationApi.previewMedication(
+            MedicationSearchItem(
+              type: candidate.itemType,
+              id: candidate.itemId,
+              name: candidate.itemName,
+            ),
+          );
+        }),
+      );
+      if (!mounted) return;
+      if (!await showMedicationPreview(context, previews)) return;
+      if (!mounted) return;
+      previewComplete = true;
       final results = await _ocrRegistrationApi.registerSelections(selections);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -317,9 +353,27 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('등록 실패: ${e.message}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              previewComplete
+                  ? '등록 실패: ${e.message}'
+                  : '등록 전 확인 실패: ${e.message}',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              previewComplete
+                  ? '등록 요청을 완료하지 못했습니다. 약장을 확인해주세요.'
+                  : '등록 전 정보를 불러오지 못했습니다. 다시 시도해주세요.',
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -382,15 +436,20 @@ class _ResultCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: AppDecorations.card(radius: 16),
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(icon, color: AppColors.primary),
-        title: Text(
-          title,
-          style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w800),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          onTap: onTap,
+          leading: Icon(icon, color: AppColors.primary),
+          title: Text(
+            title,
+            style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w800),
+          ),
+          subtitle: Text(subtitle, style: AppTextStyles.caption),
+          trailing: Icon(trailing, color: AppColors.primary),
         ),
-        subtitle: Text(subtitle, style: AppTextStyles.caption),
-        trailing: Icon(trailing, color: AppColors.primary),
       ),
     );
   }

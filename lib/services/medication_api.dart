@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'api_client.dart';
 import 'ingredient_guide.dart';
 import 'ingredient_overlap.dart';
+import 'medication_preview.dart';
 
 enum SearchItemType { medicine, supplement }
 
@@ -202,6 +203,17 @@ class MedicationApi {
         'itemId': item.id,
         ...supplyDays == null ? const {} : {'supplyDays': supplyDays},
       },
+    );
+  }
+
+  Future<MedicationPreview> previewMedication(MedicationSearchItem item) async {
+    final response = await _apiClient.get(
+      '/api/mypills/preview',
+      auth: true,
+      query: {'type': item.requestType, 'itemId': '${item.id}'},
+    );
+    return MedicationPreview.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
     );
   }
 
