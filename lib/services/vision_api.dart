@@ -102,11 +102,24 @@ class VisionApi {
 
   final ApiClient _apiClient;
 
-  Future<List<PillIdentifyCandidate>> identifyPill(XFile image) async {
+  Future<List<int>> _imageBytes(XFile image, List<int>? cachedBytes) async {
+    if (cachedBytes != null) {
+      return cachedBytes;
+    }
+    if (await image.length() > ApiClient.maxImageBytes) {
+      throw ApiException(413, '이미지는 30MB 이하로 선택해주세요.', code: 'IMAGE_TOO_LARGE');
+    }
+    return image.readAsBytes();
+  }
+
+  Future<List<PillIdentifyCandidate>> identifyPill(
+    XFile image, {
+    List<int>? imageBytes,
+  }) async {
     final response = await _apiClient.postMultipart(
       '/api/vision/identify',
       auth: false,
-      fileBytes: await image.readAsBytes(),
+      fileBytes: await _imageBytes(image, imageBytes),
       fileName: image.name,
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -127,11 +140,14 @@ class VisionApi {
     }).toList();
   }
 
-  Future<List<PrescriptionOcrItem>> scanPrescription(XFile image) async {
+  Future<List<PrescriptionOcrItem>> scanPrescription(
+    XFile image, {
+    List<int>? imageBytes,
+  }) async {
     final response = await _apiClient.postMultipart(
       '/api/ocr/prescription',
       auth: false,
-      fileBytes: await image.readAsBytes(),
+      fileBytes: await _imageBytes(image, imageBytes),
       fileName: image.name,
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;

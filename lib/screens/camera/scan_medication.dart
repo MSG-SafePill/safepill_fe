@@ -33,7 +33,18 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
     if (image == null) {
       return;
     }
+    if (await image.length() > ApiClient.maxImageBytes) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('이미지는 30MB 이하로 선택해주세요.')),
+        );
+      }
+      return;
+    }
     final imageBytes = await image.readAsBytes();
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       _selectedImage = image;
@@ -56,6 +67,9 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
   }
 
   Future<void> _analyzeImage(XFile image, Uint8List imageBytes) async {
+    if (_isLoading || !mounted) {
+      return;
+    }
     setState(() => _isLoading = true);
     List<PillIdentifyCandidate> pillCandidates = [];
     List<PrescriptionOcrItem> prescriptionItems = [];
@@ -63,9 +77,9 @@ class _ScanMedicationScreenState extends State<ScanMedicationScreen> {
 
     try {
       if (_mode == ScanMode.pill) {
-        pillCandidates = await _visionApi.identifyPill(image);
+        pillCandidates = await _visionApi.identifyPill(image, imageBytes: imageBytes);
       } else {
-        prescriptionItems = await _visionApi.scanPrescription(image);
+        prescriptionItems = await _visionApi.scanPrescription(image, imageBytes: imageBytes);
       }
     } on ApiException catch (e) {
       errorMessage = e.message;

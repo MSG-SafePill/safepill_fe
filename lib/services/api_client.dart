@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -21,6 +22,7 @@ class ApiClient {
       _storage = storage ?? const FlutterSecureStorage();
 
   static const String tokenKey = 'jwt_token';
+  static const int maxImageBytes = 30 * 1024 * 1024;
 
   final http.Client _httpClient;
   final FlutterSecureStorage _storage;
@@ -106,8 +108,20 @@ class ApiClient {
     String fieldName = 'image',
     Map<String, String>? fields,
     bool auth = false,
+    Duration timeout = const Duration(seconds: 90),
   }) async {
-    final request = http.MultipartRequest('POST', _buildUri(path));
+    if (fileBytes.isEmpty) {
+      throw ApiException(400, '이미지를 선택해주세요.', code: 'EMPTY_IMAGE');
+    }
+    if (fileBytes.length > maxImageBytes) {
+      throw ApiException(413, '이미지는 30MB 이하로 선택해주세요.', code: 'IMAGE_TOO_LARGE');
+    }
+    final abort = Completer<void>();
+    final request = http.AbortableMultipartRequest(
+      'POST',
+      _buildUri(path),
+      abortTrigger: abort.future,
+    );
     if (fields != null) {
       request.fields.addAll(fields);
     }
@@ -121,10 +135,40 @@ class ApiClient {
     request.files.add(
       http.MultipartFile.fromBytes(fieldName, fileBytes, filename: fileName),
     );
-    final streamed = await _httpClient.send(request);
-    final response = await http.Response.fromStream(streamed);
-    _throwIfFailed(response);
-    return response;
+    final stopwatch = Stopwatch()..start();
+    String? requestId;
+    int? statusCode;
+    try {
+      // A single deadline covers both the upload and the complete response body.
+      final response = await (() async {
+        final streamed = await _httpClient.send(request);
+        return http.Response.fromStream(streamed);
+      })().timeout(timeout);
+      requestId = response.headers['x-request-id'];
+      statusCode = response.statusCode;
+      _throwIfFailed(response);
+      return response;
+    } on TimeoutException {
+      abort.complete();
+      throw ApiException(
+        504,
+        '이미지 분석 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.',
+        code: 'AI_TIMEOUT',
+      );
+    } on http.ClientException {
+      throw ApiException(
+        503,
+        '이미지 분석 서버에 연결할 수 없습니다. 네트워크를 확인해주세요.',
+        code: 'AI_CONNECTION_FAILED',
+      );
+    } finally {
+      stopwatch.stop();
+      if (kDebugMode) {
+        debugPrint('vision stage=client_total path=$path '
+            'request_id=$requestId status=$statusCode '
+            'elapsed_ms=${stopwatch.elapsedMilliseconds} bytes=${fileBytes.length}');
+      }
+    }
   }
 
   Future<http.Response> delete(String path, {bool auth = false}) async {
